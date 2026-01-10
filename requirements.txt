@@ -1,0 +1,20 @@
+# VoiceAgent Requirements
+# For those preferring pip over UV
+# Install with: pip install -r requirements.txt
+
+groq>=0.11.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+sounddevice>=0.4.6
+soundfile>=0.12.1
+numpy>=1.24.0
+rich>=13.0.0
+gtts>=2.5.0
+
+# Development dependencies (optional)
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+ruff>=0.1.0
+
