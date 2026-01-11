@@ -1,15 +1,17 @@
 # 🎙️ VoiceAgent
 
-A **production-grade voice agent** built with Groq's high-performance AI models. Create AI-powered voice assistants that can see, hear, and speak naturally.
+A **production-grade voice agent** built with OpenAI Agents SDK, Groq's AI models, and Orpheus TTS. Create AI-powered voice assistants that can hear, think, and speak naturally.
 
 ## ✨ Features
 
 -   🎤 **Speech-to-Text**: Powered by Groq's Whisper models for fast, accurate transcription
--   🤖 **Intelligent Agent**: Uses Groq's Llama models for natural conversations
--   🔊 **Text-to-Speech**: Local Ollama model (legraphista/Orpheus) for voice synthesis
+-   🤖 **Intelligent Agent**: Uses Groq's Llama models via OpenAI Agents SDK for natural conversations
+-   🔊 **Text-to-Speech**: Orpheus TTS via LM Studio for high-quality voice synthesis
+-   🎭 **Multiple Voices**: 8 different voices (tara, leah, jess, leo, dan, mia, zac, zoe)
 -   🔄 **Complete Pipeline**: Seamless audio → text → AI → speech → audio workflow
--   📦 **Modular Architecture**: Reusable components for custom integrations
+-   📦 **Modular Architecture**: Built on OpenAI Agents SDK with custom providers
 -   ⚙️ **Configurable**: Environment-based configuration with sensible defaults
+-   🎯 **Interactive Menu**: Menu-driven interface for all features
 -   🚀 **Production-Ready**: Clean code, error handling, and logging
 
 ## 🏗️ Architecture
@@ -26,12 +28,14 @@ A **production-grade voice agent** built with Groq's high-performance AI models.
        │
        ▼
 ┌─────────────┐
-│    Agent    │  ◄── Llama-3.3-70b (Groq)
+│    Agent    │  ◄── Llama-3.3-70b (Groq via LiteLLM)
+│  (OpenAI)   │      OpenAI Agents SDK
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│TTS (Ollama) │  ◄── legraphista/Orpheus:latest
+│TTS (Orpheus)│  ◄── lex-au/Orpheus-3b-FT-Q4_K_M.gguf
+│ (LM Studio) │      Running on LM Studio
 └──────┬──────┘
        │
        ▼
@@ -45,20 +49,19 @@ A **production-grade voice agent** built with Groq's high-performance AI models.
 -   Python 3.10 or higher
 -   UV package manager
 -   **Groq API key** ([Get one here](https://console.groq.com))
--   **Ollama** installed locally with `legraphista/Orpheus:latest` model
+-   **LM Studio** with Orpheus TTS model
 -   Microphone and speakers/headphones
 
-### Setting up Ollama
+### Setting up LM Studio
 
-```bash
-# Install Ollama from https://ollama.com/download
+1. Download and install [LM Studio](https://lmstudio.ai/)
+2. In LM Studio, search for and download: `lex-au/Orpheus-3b-FT-Q4_K_M.gguf`
+3. Load the model in LM Studio
+4. **IMPORTANT**: Start the local server (default: http://localhost:1234/v1)
+    - The server must be running for TTS to work
+    - Orpheus TTS uses the `/completions` endpoint (not `/chat/completions`)
 
-# Pull the Orpheus TTS model
-ollama pull legraphista/Orpheus:latest
-
-# Verify it's running
-ollama list
-```
+Reference: [Orpheus TTS Local](https://github.com/isaiahbjork/orpheus-tts-local)
 
 ## 🚀 Quick Start
 
@@ -96,7 +99,7 @@ Create a `.env` file in the project root:
 # Copy example
 cp .env.example .env
 
-# Edit with your API keys
+# Edit with your API key
 nano .env
 ```
 
@@ -104,20 +107,24 @@ Add your API key:
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
+LM_STUDIO_URL=http://localhost:1234/v1
+TTS_VOICE=tara
 ```
 
-### 4. Run Your First Voice Agent
+### 4. Run Your Voice Agent
 
 ```bash
 python main.py
 ```
 
-This launches the interactive menu where you can:
+This launches the **interactive menu** where you can:
 
--   Start voice conversations
--   Chat with text + voice responses
--   View conversation history
--   Customize agent instructions
+-   🎤 Start voice conversations
+-   💬 Chat with text + voice responses
+-   📝 Text-only chat mode
+-   ⚙️ Configure agent settings
+-   🎯 Quick test functionality
+-   ℹ️ View system information
 
 ## 📖 Usage Examples
 
@@ -127,12 +134,20 @@ This launches the interactive menu where you can:
 python main.py
 ```
 
-Provides a menu-driven interface for all features.
+Provides a menu-driven interface with 7 options:
+
+1. **Start Voice Conversation** - Full voice interaction
+2. **Text Chat with Voice Response** - Type and hear responses
+3. **Text-Only Chat** - Pure text mode
+4. **Configure Agent Settings** - Customize behavior
+5. **Quick Test** - Test the system
+6. **System Information** - View configuration
+7. **Exit** - Close the application
 
 ### Voice Conversation Mode
 
 ```bash
-# Unlimited conversation
+# Direct voice conversation (bypass menu)
 python main.py --mode voice
 
 # Limited to 5 turns
@@ -155,21 +170,43 @@ python main.py --mode text --message "What's the weather?" --no-voice-response
 python main.py --instructions "You are a pirate captain. Speak like a pirate!"
 ```
 
+## 🎨 Available Voices
+
+Orpheus TTS supports 8 different voices:
+
+-   **tara** (default) - Best overall voice for general use
+-   **leah** - Clear female voice
+-   **jess** - Friendly female voice
+-   **leo** - Professional male voice
+-   **dan** - Casual male voice
+-   **mia** - Expressive female voice
+-   **zac** - Energetic male voice
+-   **zoe** - Calm female voice
+
+Change voice in `.env`:
+
+```env
+TTS_VOICE=leo
+```
+
+Or in the interactive menu: Option 4 → Configure Agent Settings
+
 ## 🔧 Programmatic Usage
 
 ### Simple Usage
 
 ```python
-from voiceagent import VoiceAgent
+import asyncio
+from voiceagent import VoiceAgent, Settings
 
-# Initialize
-agent = VoiceAgent()
+async def main():
+    # Initialize with defaults
+    agent = VoiceAgent()
 
-# Run conversation (voice)
-agent.run_conversation(max_turns=3)
+    # Run conversation (voice)
+    await agent.run_conversation(max_turns=3)
 
-# Text chat with voice response
-response = agent.chat_text("Hello!", speak_response=True)
+asyncio.run(main())
 ```
 
 ### Custom Agent
@@ -182,37 +219,46 @@ settings = Settings()
 settings.agent_name = "MyAssistant"
 settings.agent_instructions = "You are a helpful coding assistant."
 settings.temperature = 0.5
+settings.tts_voice = "leo"
 
 # Create agent
 agent = VoiceAgent(settings)
 
 # Use it
-agent.run_conversation()
+await agent.run_conversation()
 ```
 
-### Using Components Separately
+### Using Custom Model Providers
 
 ```python
-from voiceagent.services import SpeechToTextService, TextToSpeechService
-from voiceagent.agent import VoiceAssistantAgent
-from voiceagent.audio import AudioRecorder, AudioPlayer
-from voiceagent.config import Settings
+from agents import Agent, ModelSettings
+from agents.voice import VoicePipeline, VoicePipelineConfig
+from voiceagent.models import CustomVoiceModelProvider, create_groq_model
 
-settings = Settings()
+# Create LLM model
+groq_model = create_groq_model(
+    api_key="your_groq_api_key",
+    model="llama-3.3-70b-versatile"
+)
 
-# Initialize components
-recorder = AudioRecorder()
-stt = SpeechToTextService(api_key=settings.groq_api_key)
-agent = VoiceAssistantAgent(groq_api_key=settings.groq_api_key)
-tts = TextToSpeechService(api_key=settings.groq_api_key)
-player = AudioPlayer()
+# Create agent
+agent = Agent(
+    name="CustomAgent",
+    instructions="Your custom instructions",
+    model=groq_model,
+    model_settings=ModelSettings(temperature=0.7)
+)
 
-# Build custom pipeline
-audio = recorder.record()
-text = stt.transcribe(audio)
-response = agent.chat(text)
-audio_response = tts.synthesize(response)
-player.play(audio_response)
+# Create voice provider
+voice_provider = CustomVoiceModelProvider(
+    groq_api_key="your_groq_api_key",
+    lm_studio_url="http://localhost:1234/v1",
+    tts_voice="tara"
+)
+
+# Create pipeline
+config = VoicePipelineConfig(model_provider=voice_provider)
+pipeline = VoicePipeline(workflow=agent, config=config)
 ```
 
 ## 📁 Project Structure
@@ -221,25 +267,21 @@ player.play(audio_response)
 VoiceAgent/
 ├── src/voiceagent/
 │   ├── __init__.py
-│   ├── audio/              # Audio recording and playback
-│   │   ├── recorder.py     # Voice activity detection
-│   │   └── player.py       # Audio playback
-│   ├── services/           # External API services
-│   │   ├── stt_service.py  # Groq Whisper STT
-│   │   └── tts_service.py  # TTS service
-│   ├── agent/              # AI Agent logic
-│   │   └── voice_assistant_agent.py
-│   ├── core/               # Main orchestrator
-│   │   └── voice_agent.py  # Pipeline manager
-│   └── config/             # Configuration
-│       └── settings.py     # Environment settings
-├── examples/               # Usage examples
-│   ├── simple_usage.py
-│   ├── custom_agent_example.py
-│   └── programmatic_usage.py
-├── main.py                 # CLI entry point
-├── pyproject.toml          # UV package config
-└── README.md              # This file
+│   ├── models/                 # Custom model providers
+│   │   ├── groq_stt.py        # Groq Whisper STT
+│   │   ├── orpheus_tts.py     # Orpheus TTS via LM Studio
+│   │   ├── groq_llm.py        # Groq LLM via LiteLLM
+│   │   └── voice_provider.py  # Custom VoiceModelProvider
+│   ├── core/                  # Core orchestration
+│   │   └── voice_agent.py     # Main VoiceAgent class
+│   ├── config/                # Configuration
+│   │   └── settings.py        # Environment settings
+│   └── audio/                 # Audio utilities (if needed)
+├── main.py                    # Interactive CLI interface
+├── test_menu.py              # Menu testing script
+├── pyproject.toml            # UV package config
+├── requirements.txt          # Pip compatibility
+└── README.md                 # This file
 ```
 
 ## ⚙️ Configuration
@@ -249,16 +291,16 @@ All settings can be configured via environment variables in `.env`:
 ### API Configuration
 
 ```env
-GROQ_API_KEY=your_key        # Required: Groq API key
+GROQ_API_KEY=your_key                          # Required: Groq API key
+LM_STUDIO_URL=http://localhost:1234/v1        # LM Studio server URL
+TTS_VOICE=tara                                # Orpheus TTS voice
 ```
 
 ### Model Configuration
 
 ```env
-STT_MODEL=whisper-large-v3                         # Speech-to-text model (Groq)
-TTS_MODEL=legraphista/Orpheus:latest               # Text-to-speech model (Local Ollama)
-LLM_MODEL=llama-3.3-70b-versatile                  # LLM for agent (Groq)
-OLLAMA_HOST=http://localhost:11434                 # Ollama server URL
+STT_MODEL=whisper-large-v3                    # Speech-to-text model (Groq)
+LLM_MODEL=llama-3.3-70b-versatile             # LLM for agent (Groq)
 ```
 
 ### Audio Configuration
@@ -290,21 +332,6 @@ TEMPERATURE=0.7            # Creativity (0.0-1.0)
 -   **Gaming**: Interactive NPCs with voice
 -   **Accessibility**: Voice interfaces for visually impaired users
 
-## 🔍 Examples Directory
-
-Run the included examples:
-
-```bash
-# Simple usage demo
-python examples/simple_usage.py
-
-# Domain-specific agents (fitness coach, language tutor, etc.)
-python examples/custom_agent_example.py
-
-# Component-level usage
-python examples/programmatic_usage.py
-```
-
 ## 🐛 Troubleshooting
 
 ### No audio input detected
@@ -313,9 +340,16 @@ python examples/programmatic_usage.py
 -   Verify microphone is connected and working
 -   Adjust `SILENCE_THRESHOLD` in `.env`
 
+### LM Studio connection errors
+
+-   Ensure LM Studio is running
+-   Verify the local server is started (default: http://localhost:1234/v1)
+-   Check that Orpheus model is loaded in LM Studio
+-   Try accessing http://localhost:1234/v1/models in browser
+
 ### API errors
 
--   Verify API keys are correct in `.env`
+-   Verify Groq API key is correct in `.env`
 -   Check API rate limits and quotas
 -   Ensure internet connection is stable
 
@@ -324,6 +358,7 @@ python examples/programmatic_usage.py
 -   Check speaker/headphone connection
 -   Verify system audio settings
 -   Try different audio output devices
+-   Check generated_audio/ folder for saved files
 
 ### Installation issues
 
@@ -339,19 +374,20 @@ uv cache clean
 
 ### Best Practices
 
-1. **Security**: Store API keys securely (e.g., AWS Secrets Manager)
-2. **Error Handling**: Implement retry logic for API calls
-3. **Monitoring**: Log conversations and errors
-4. **Rate Limiting**: Implement request throttling
+1. **Security**: Store API keys securely (e.g., AWS Secrets Manager, HashiCorp Vault)
+2. **Error Handling**: Implement retry logic for API calls with exponential backoff
+3. **Monitoring**: Log conversations, errors, and performance metrics
+4. **Rate Limiting**: Implement request throttling to avoid API limits
 5. **Caching**: Cache TTS responses for common phrases
-6. **Async**: Use async/await for better performance
+6. **Async**: All operations are async for better performance
 
 ### Scaling
 
 -   Use message queues (RabbitMQ, Redis) for high traffic
--   Deploy behind load balancer
+-   Deploy behind load balancer (NGINX, HAProxy)
 -   Consider streaming STT/TTS for lower latency
 -   Implement session management for multiple users
+-   Use Redis for distributed caching
 
 ## 🤝 Contributing
 
@@ -362,6 +398,7 @@ This is a production-ready template. Feel free to extend it:
 -   Add web interface (FastAPI + WebSockets)
 -   Implement multi-language support
 -   Add voice activity detection improvements
+-   Create custom TTS voices
 
 ## 📝 License
 
@@ -369,19 +406,21 @@ MIT License - feel free to use in your projects!
 
 ## 🙏 Acknowledgments
 
+-   **OpenAI Agents SDK**: Powerful agent framework
 -   **Groq**: Fast Whisper STT and Llama LLM models
--   **Ollama**: Local LLM runtime for Orpheus TTS
--   **legraphista/Orpheus**: Open-source TTS model
+-   **LM Studio**: Local model runtime
+-   **Orpheus TTS**: High-quality open-source TTS ([GitHub](https://github.com/isaiahbjork/orpheus-tts-local))
 -   **Rich**: Beautiful terminal output
 
 ## 📞 Support
 
 For issues and questions:
 
--   Check the examples directory
+-   Run the test script: `python test_menu.py`
+-   Check system info in interactive menu (Option 6)
 -   Review configuration in `.env`
--   Test individual components separately
+-   Check generated_audio/ folder for debugging
 
 ---
 
-**Built with ❤️ using Groq + Ollama**
+**Built with ❤️ using OpenAI Agents SDK, Groq, and Orpheus TTS**

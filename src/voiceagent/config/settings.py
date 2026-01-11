@@ -18,17 +18,20 @@ class Settings(BaseSettings):
     # API Keys
     groq_api_key: str = Field(..., description="Groq API key")
 
+    # LM Studio Configuration
+    lm_studio_url: str = Field(
+        default="http://localhost:1234/v1", description="LM Studio server URL"
+    )
+    tts_voice: str = Field(
+        default="tara",
+        description="Orpheus TTS voice (tara, leah, jess, leo, dan, mia, zac, zoe)",
+    )
+
     # Model Configuration
     stt_model: str = Field(default="whisper-large-v3",
                            description="Speech-to-text model (Groq)")
-    tts_model: str = Field(
-        default="legraphista/Orpheus:latest", description="Text-to-speech model (Local Ollama)")
     llm_model: str = Field(default="llama-3.3-70b-versatile",
                            description="LLM model for agent (Groq)")
-
-    # Ollama Configuration
-    ollama_host: str = Field(
-        default="http://localhost:11434", description="Ollama server host")
 
     # Audio Configuration
     sample_rate: int = Field(
@@ -60,6 +63,6 @@ class Settings(BaseSettings):
             f"Settings("
             f"groq_api_key={'***' if self.groq_api_key else None}, "
             f"stt_model={self.stt_model}, "
-            f"tts_model={self.tts_model}, "
+            f"tts_voice={self.tts_voice}, "
             f"llm_model={self.llm_model})"
         )

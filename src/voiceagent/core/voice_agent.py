@@ -1,185 +1,359 @@
 """
-VoiceAgent - Main orchestrator for voice-based AI interactions.
+VoiceAgent - Voice pipeline using OpenAI Agents SDK.
 
-This module ties together STT, Agent, and TTS into a seamless pipeline.
+This implementation uses the SDK's VoicePipeline with custom models:
+- STT: Groq Whisper
+- LLM: Groq Llama (via LiteLLM)
+- TTS: Google TTS (gTTS)
 """
 
+from ..models.groq_llm import create_groq_model
+from ..models import CustomVoiceModelProvider
+from ..config.settings import Settings
+from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
+from agents.voice import (
+    VoicePipeline,
+    SingleAgentVoiceWorkflow,
+    AudioInput,
+    VoicePipelineConfig,
+)
+from agents import Agent, set_tracing_disabled, Runner
+import warnings
+import numpy as np
+import sounddevice as sd
 from typing import Optional
+from pathlib import Path
 from rich.console import Console
 
-from ..config.settings import Settings
-from ..audio.recorder import AudioRecorder
-from ..audio.player import AudioPlayer
-from ..services.stt_service import SpeechToTextService
-from ..services.tts_service import TextToSpeechService
-from ..agent.voice_assistant_agent import VoiceAssistantAgent
+# Suppress Pydantic warnings from LiteLLM
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
+
 
 console = Console()
 
 
 class VoiceAgent:
     """
-    Main VoiceAgent orchestrator that manages the complete voice interaction pipeline:
-    Audio Input → STT → Agent → TTS → Audio Output
+    Voice Agent using OpenAI Agents SDK VoicePipeline.
+
+    Architecture:
+    Audio Input → Groq STT → Agent (Groq LLM) → gTTS → Audio Output
     """
 
     def __init__(self, settings: Optional[Settings] = None):
         """
-        Initialize VoiceAgent with all required components.
+        Initialize VoiceAgent with OpenAI Agents SDK.
 
         Args:
-            settings: Configuration settings (loads from .env if not provided)
+            settings: Configuration settings
         """
-        # Load settings
         self.settings = settings or Settings()
 
-        # Initialize components
-        console.print("[bold blue]🚀 Initializing VoiceAgent...[/bold blue]")
+        # Disable tracing if no OpenAI key (since we're using Groq)
+        set_tracing_disabled(True)
 
-        # Audio components
-        self.recorder = AudioRecorder(
-            sample_rate=self.settings.sample_rate,
-            channels=self.settings.channels,
-            chunk_size=self.settings.chunk_size,
-            silence_threshold=self.settings.silence_threshold,
-            silence_duration=self.settings.silence_duration,
-        )
-        self.player = AudioPlayer()
+        console.print(
+            "[bold blue]🚀 Initializing VoiceAgent with OpenAI Agents SDK...[/bold blue]")
 
-        # STT service
-        self.stt = SpeechToTextService(
+        # Create Groq LLM model using LiteLLM
+        groq_model = create_groq_model(
             api_key=self.settings.groq_api_key,
-            model=self.settings.stt_model,
-        )
-
-        # TTS service
-        self.tts = TextToSpeechService(
-            api_key=self.settings.groq_api_key,
-            model=self.settings.tts_model,
-        )
-
-        # Agent
-        self.agent = VoiceAssistantAgent(
-            groq_api_key=self.settings.groq_api_key,
             model=self.settings.llm_model,
-            name=self.settings.agent_name,
-            instructions=self.settings.agent_instructions,
-            max_tokens=self.settings.max_tokens,
-            temperature=self.settings.temperature,
         )
 
-        console.print("[bold green]✓ VoiceAgent ready![/bold green]")
+        # Create the agent using OpenAI Agents SDK
+        # Model settings (temperature, max_tokens) are passed via the Agent
+        from agents import ModelSettings
 
-    def process_voice_input(self, play_response: bool = True) -> tuple[str, str, Optional[bytes]]:
+        self.agent = Agent(
+            name=self.settings.agent_name,
+            instructions=prompt_with_handoff_instructions(
+                self.settings.agent_instructions
+            ),
+            model=groq_model,
+            model_settings=ModelSettings(
+                temperature=self.settings.temperature,
+                max_tokens=self.settings.max_tokens,
+            ),
+        )
+
+        # Create custom voice model provider (STT + TTS)
+        voice_provider = CustomVoiceModelProvider(
+            groq_api_key=self.settings.groq_api_key,
+            stt_model=self.settings.stt_model,
+            lm_studio_url=self.settings.lm_studio_url,
+            tts_voice=self.settings.tts_voice,
+        )
+
+        # Create voice pipeline config
+        config = VoicePipelineConfig(
+            model_provider=voice_provider,
+        )
+
+        # Create the voice pipeline with our agent
+        workflow = SingleAgentVoiceWorkflow(self.agent)
+        self.pipeline = VoicePipeline(workflow=workflow, config=config)
+
+        # Create output directory for saved audio
+        self.output_dir = Path("generated_audio")
+        self.output_dir.mkdir(exist_ok=True)
+
+        # Store TTS model instance for text chat
+        self._tts_model = voice_provider.get_tts_model(None)
+
+        console.print(
+            "[bold green]✓ VoiceAgent ready with OpenAI Agents SDK![/bold green]")
+        console.print(f"[cyan]  STT: {self.settings.stt_model} (Groq)[/cyan]")
+        console.print(f"[cyan]  LLM: {self.settings.llm_model} (Groq)[/cyan]")
+        console.print(
+            f"[cyan]  TTS: Orpheus TTS - {self.settings.tts_voice} (LM Studio + SNAC)[/cyan]")
+
+    async def process_voice_input(
+        self, audio_buffer: np.ndarray, play_response: bool = True
+    ) -> tuple[str, bytes]:
         """
-        Process a single voice interaction:
-        1. Record audio
-        2. Transcribe to text
-        3. Get agent response
-        4. Synthesize to speech
-        5. Play audio (optional)
+        Process voice input through the pipeline.
 
         Args:
+            audio_buffer: Audio data as numpy array
             play_response: Whether to play the audio response
 
         Returns:
-            Tuple of (transcribed_text, agent_response, audio_bytes)
+            Tuple of (transcribed_text, audio_response_bytes)
         """
-        # Step 1: Record audio
-        audio_data = self.recorder.record(max_duration=self.settings.record_seconds)
+        console.print("[bold green]🎤 Processing voice input...[/bold green]")
 
-        # Step 2: Transcribe
-        transcribed_text = self.stt.transcribe(
-            audio_data,
-            sample_rate=self.settings.sample_rate,
-            channels=self.settings.channels,
-        )
+        # Create AudioInput from buffer
+        audio_input = AudioInput(buffer=audio_buffer)
 
-        if not transcribed_text or transcribed_text.strip() == "":
-            console.print("[yellow]⚠️  No speech detected[/yellow]")
-            return "", "", None
+        # Run the voice pipeline
+        result = await self.pipeline.run(audio_input)
 
-        # Step 3: Get agent response
-        agent_response = self.agent.chat(transcribed_text)
+        # Collect audio chunks
+        audio_chunks = []
+        transcribed_text = ""
 
-        # Step 4: Synthesize speech
-        audio_bytes = self.tts.synthesize(agent_response)
+        # Stream and optionally play the response
+        player = None
+        if play_response:
+            player = sd.OutputStream(
+                samplerate=24000, channels=1, dtype=np.int16
+            )
+            player.start()
 
-        # Step 5: Play audio (optional)
-        if play_response and audio_bytes:
-            self.player.play(audio_bytes)
+        try:
+            async for event in result.stream():
+                if event.type == "voice_stream_event_audio":
+                    audio_chunks.append(event.data)
+                    if play_response and player:
+                        player.write(event.data)
+                elif event.type == "voice_stream_event_transcript":
+                    transcribed_text = event.text
+        finally:
+            if player:
+                player.stop()
+                player.close()
 
-        return transcribed_text, agent_response, audio_bytes
+        # Combine all audio chunks
+        audio_response = b"".join(audio_chunks)
 
-    def chat_text(self, text: str, speak_response: bool = True) -> str:
+        console.print(f"[green]✓ Transcription:[/green] {transcribed_text}")
+        console.print(
+            f"[green]✓ Generated {len(audio_response)} bytes of audio[/green]")
+
+        return transcribed_text, audio_response
+
+    def record_audio(self, duration: int = 5) -> np.ndarray:
         """
-        Text-based chat (bypass STT).
+        Record audio from microphone.
 
         Args:
-            text: User's text input
-            speak_response: Whether to synthesize and play the response
+            duration: Recording duration in seconds
 
         Returns:
-            Agent's response
+            Audio data as numpy array
         """
-        console.print(f"[bold yellow]💭 User (text):[/bold yellow] {text}")
+        console.print(
+            f"[bold green]🎤 Recording for {duration} seconds...[/bold green]")
 
-        # Get agent response
-        agent_response = self.agent.chat(text)
+        # Record audio
+        sample_rate = 24000  # OpenAI Agents SDK uses 24kHz
+        recording = sd.rec(
+            int(duration * sample_rate),
+            samplerate=sample_rate,
+            channels=1,
+            dtype=np.int16,
+        )
+        sd.wait()
 
-        # Optionally synthesize and play
-        if speak_response:
-            audio_bytes = self.tts.synthesize(agent_response)
-            self.player.play(audio_bytes)
+        console.print("[green]✓ Recording complete[/green]")
+        return recording.flatten()
 
-        return agent_response
-
-    def run_conversation(self, max_turns: Optional[int] = None) -> None:
+    async def run_conversation(self, max_turns: Optional[int] = None):
         """
         Run a continuous voice conversation.
 
         Args:
-            max_turns: Maximum number of conversation turns (None for unlimited)
+            max_turns: Maximum number of conversation turns
         """
-        console.print("\n[bold blue]╔═══════════════════════════════════════╗[/bold blue]")
-        console.print("[bold blue]║   🎙️  VOICE AGENT CONVERSATION      ║[/bold blue]")
-        console.print("[bold blue]╚═══════════════════════════════════════╝[/bold blue]\n")
+        console.print(
+            "\n[bold blue]╔═══════════════════════════════════════╗[/bold blue]")
+        console.print(
+            "[bold blue]║   🎙️  VOICE AGENT CONVERSATION      ║[/bold blue]")
+        console.print(
+            "[bold blue]╚═══════════════════════════════════════╝[/bold blue]\n")
         console.print("[dim]Press Ctrl+C to exit[/dim]\n")
 
         turn = 0
         try:
             while max_turns is None or turn < max_turns:
                 turn += 1
-                console.print(f"\n[bold white]═══ Turn {turn} ═══[/bold white]\n")
+                console.print(
+                    f"\n[bold white]═══ Turn {turn} ═══[/bold white]\n")
 
-                # Process voice input
-                self.process_voice_input(play_response=True)
+                # Record audio
+                audio_buffer = self.record_audio(duration=5)
+
+                # Process through pipeline
+                await self.process_voice_input(audio_buffer, play_response=True)
 
                 console.print("")
 
         except KeyboardInterrupt:
-            console.print("\n\n[bold yellow]👋 Conversation ended by user[/bold yellow]")
+            console.print(
+                "\n\n[bold yellow]👋 Conversation ended by user[/bold yellow]")
         except Exception as e:
             console.print(f"\n\n[bold red]❌ Error: {str(e)}[/bold red]")
-            raise
+            import traceback
+            console.print(f"[red]{traceback.format_exc()}[/red]")
         finally:
             console.print(f"\n[dim]Total turns: {turn}[/dim]\n")
 
-    def reset(self) -> None:
-        """Reset the agent's conversation history."""
-        self.agent.reset_conversation()
-        console.print("[green]✓ VoiceAgent reset[/green]")
-
-    def update_agent_instructions(self, instructions: str) -> None:
+    async def chat_text(self, user_message: str, speak_response: bool = True) -> str:
         """
-        Update the agent's instructions.
+        Process a text message and get agent response using OpenAI Agents SDK.
 
         Args:
-            instructions: New instructions for the agent
+            user_message: User's text message
+            speak_response: Whether to synthesize and play voice response
+
+        Returns:
+            Agent's text response
         """
-        self.agent.set_instructions(instructions)
+        console.print(f"[bold cyan]💬 You:[/bold cyan] {user_message}")
 
-    def get_conversation_history(self) -> list:
-        """Get the conversation history."""
-        return self.agent.get_conversation_history()
+        try:
+            # Use Runner.run() to process text through the agent
+            # This is the correct way to run an agent in OpenAI Agents SDK
+            result = await Runner.run(
+                starting_agent=self.agent,
+                input=user_message
+            )
 
+            # Extract text response from agent result
+            # RunResult has a final_output attribute
+            response_text = ""
+
+            # Try to extract the final output text
+            if hasattr(result, "final_output"):
+                response_text = result.final_output or ""
+            elif hasattr(result, "messages") and result.messages:
+                # Get the last message which should be the assistant's response
+                last_message = result.messages[-1]
+                if hasattr(last_message, "content"):
+                    response_text = last_message.content or ""
+                elif isinstance(last_message, dict):
+                    response_text = last_message.get("content", "")
+            elif hasattr(result, "content") and result.content:
+                response_text = result.content
+            elif isinstance(result, str):
+                response_text = result
+            elif hasattr(result, "text"):
+                response_text = result.text
+            else:
+                # Fallback: convert to string
+                response_text = str(result)
+
+            if not response_text or response_text.strip() == "":
+                response_text = "I apologize, but I couldn't generate a response. Please try again."
+
+            console.print(f"[bold green]🤖 Agent:[/bold green] {response_text}")
+
+            # Synthesize and play voice if requested
+            if speak_response and response_text:
+                await self._synthesize_and_play(response_text)
+
+            return response_text
+
+        except Exception as e:
+            console.print(f"[bold red]✗ Error:[/bold red] {str(e)}")
+            import traceback
+            console.print(f"[red]{traceback.format_exc()}[/red]")
+            raise
+
+    async def _synthesize_and_play(self, text: str):
+        """
+        Synthesize text to speech and play it.
+
+        Args:
+            text: Text to synthesize
+        """
+        from agents.voice import TTSModelSettings
+        import soundfile as sf
+        import io
+
+        try:
+            console.print("[dim]🎵 Generating speech...[/dim]")
+
+            # Use TTS model to generate audio
+            audio_chunks = []
+            async for chunk in self._tts_model.run(text, TTSModelSettings()):
+                audio_chunks.append(chunk)
+
+            if not audio_chunks:
+                console.print("[yellow]⚠ No audio generated[/yellow]")
+                return
+
+            # Combine chunks
+            audio_data = b"".join(audio_chunks)
+
+            # Play audio using sounddevice
+            # TTS models output WAV format, so read it with soundfile
+            try:
+                audio_io = io.BytesIO(audio_data)
+
+                # Read WAV file from bytes
+                audio_array, sample_rate = sf.read(audio_io, dtype="float32")
+
+                # Convert to mono if stereo
+                if len(audio_array.shape) > 1:
+                    audio_array = audio_array[:, 0]
+
+                # Normalize audio (optional, but helps with playback)
+                max_val = abs(audio_array).max() if len(
+                    audio_array) > 0 else 1.0
+                if max_val > 0:
+                    audio_array = audio_array / max_val
+
+                # Play audio
+                console.print("[dim]🔊 Playing response...[/dim]")
+                sd.play(audio_array, samplerate=sample_rate)
+                sd.wait()
+
+            except Exception as e:
+                console.print(
+                    f"[yellow]⚠ Could not play audio: {str(e)}[/yellow]")
+                # Try alternative: save and inform user
+                try:
+                    output_file = self.output_dir / \
+                        f"chat_response_{len(text[:20])}.wav"
+                    with open(output_file, "wb") as f:
+                        f.write(audio_data)
+                    console.print(f"[dim]Audio saved to: {output_file}[/dim]")
+                except:
+                    pass
+
+        except Exception as e:
+            console.print(f"[yellow]⚠ TTS Error: {str(e)}[/yellow]")
+            import traceback
+            console.print(f"[dim]{traceback.format_exc()}[/dim]")
