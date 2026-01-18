@@ -305,6 +305,15 @@ AudioContext.playPCM()
 Speakers
 ```
 
+### Audio Format Details
+
+The web interface uses **raw PCM audio format** for consistent playback:
+
+-   **Input Processing**: `process_audio_chunk()` accepts audio chunks (WebM or WAV) from the browser, converts them to numpy arrays, and processes through the voice agent pipeline
+-   **Output Format**: Both `process_audio_chunk()` and `process_text_message()` return **raw PCM data** (16-bit, mono, 24kHz) in **4KB chunks** for streaming
+-   **Format Consistency**: Standardized audio format ensures reliable playback across different browsers and audio contexts
+-   **Streaming**: Audio is streamed in chunks via WebSocket for low-latency, real-time playback
+
 ## 📁 Project Structure
 
 ```

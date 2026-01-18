@@ -163,25 +163,63 @@ class VoiceService:
             audio_array, play_response=False
         )
 
-        # Convert audio response to WAV format if it's not already
-        if isinstance(audio_response, np.ndarray):
-            # Convert numpy array to WAV bytes
-            wav_io = io.BytesIO()
-            with wave.open(wav_io, 'wb') as wav_file:
-                wav_file.setnchannels(1)  # Mono
-                wav_file.setsampwidth(2)  # 16-bit
-                wav_file.setframerate(24000)  # 24kHz
-                wav_file.writeframes(audio_response.tobytes())
-            audio_response = wav_io.getvalue()
+        # Extract PCM data from audio response
+        # Create async iterator for streaming PCM audio chunks
+        async def pcm_audio_iterator():
+            try:
+                pcm_data = None
 
-        # Create async iterator for audio chunks
-        # For streaming audio, we'll send smaller chunks with WAV headers
-        async def audio_iterator():
-            # For now, send the complete audio as one chunk for simplicity
-            # This ensures proper WAV format
-            yield audio_response
+                if isinstance(audio_response, np.ndarray):
+                    # Convert numpy array directly to PCM bytes
+                    pcm_data = audio_response.tobytes()
+                    console.print(
+                        f"[dim]Converted numpy array to PCM: {len(pcm_data)} bytes[/dim]"
+                    )
+                elif isinstance(audio_response, bytes):
+                    # If it's WAV bytes, extract PCM from WAV
+                    pcm_data = self._extract_pcm_from_wav(audio_response)
+                    if not pcm_data:
+                        console.print(
+                            "[red]Failed to extract PCM from WAV[/red]")
+                        return
+                    console.print(
+                        f"[dim]Extracted PCM from WAV: {len(pcm_data)} bytes[/dim]"
+                    )
+                else:
+                    console.print(
+                        f"[red]Unexpected audio_response type: {type(audio_response)}[/red]"
+                    )
+                    return
 
-        return transcribed_text, audio_iterator()
+                if not pcm_data:
+                    console.print("[red]No PCM data available[/red]")
+                    return
+
+                console.print(
+                    f"[green]✓ PCM data ready: {len(pcm_data)} bytes[/green]"
+                )
+
+                # Stream PCM in smaller chunks for real-time playback
+                chunk_size = 4096  # Stream in 4KB chunks
+                chunk_count = 0
+
+                for i in range(0, len(pcm_data), chunk_size):
+                    pcm_chunk = pcm_data[i: i + chunk_size]
+                    chunk_count += 1
+                    console.print(
+                        f"[dim]📤 Streaming PCM chunk {chunk_count}: {len(pcm_chunk)} bytes[/dim]"
+                    )
+                    yield pcm_chunk
+
+                console.print(
+                    f"[green]✓ Streamed {chunk_count} PCM chunks[/green]"
+                )
+
+            except Exception as e:
+                console.print(f"[red]PCM streaming error: {e}[/red]")
+                raise
+
+        return transcribed_text, pcm_audio_iterator()
 
     async def process_text_message(self, text: str) -> tuple[str, AsyncIterator[bytes]]:
         """
