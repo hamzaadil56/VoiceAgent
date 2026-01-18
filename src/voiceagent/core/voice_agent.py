@@ -22,7 +22,6 @@ import warnings
 import numpy as np
 import sounddevice as sd
 from typing import Optional
-from pathlib import Path
 from rich.console import Console
 
 # Suppress Pydantic warnings from LiteLLM
@@ -93,10 +92,6 @@ class VoiceAgent:
         # Create the voice pipeline with our agent
         workflow = SingleAgentVoiceWorkflow(self.agent)
         self.pipeline = VoicePipeline(workflow=workflow, config=config)
-
-        # Create output directory for saved audio
-        self.output_dir = Path("generated_audio")
-        self.output_dir.mkdir(exist_ok=True)
 
         # Store TTS model instance for text chat
         self._tts_model = voice_provider.get_tts_model(None)
@@ -343,15 +338,6 @@ class VoiceAgent:
             except Exception as e:
                 console.print(
                     f"[yellow]⚠ Could not play audio: {str(e)}[/yellow]")
-                # Try alternative: save and inform user
-                try:
-                    output_file = self.output_dir / \
-                        f"chat_response_{len(text[:20])}.wav"
-                    with open(output_file, "wb") as f:
-                        f.write(audio_data)
-                    console.print(f"[dim]Audio saved to: {output_file}[/dim]")
-                except:
-                    pass
 
         except Exception as e:
             console.print(f"[yellow]⚠ TTS Error: {str(e)}[/yellow]")

@@ -3,7 +3,6 @@
 import io
 import wave
 import json
-from pathlib import Path
 from typing import AsyncIterator
 import httpx
 from rich.console import Console
@@ -58,13 +57,6 @@ class OrpheusTTSModel(TTSModel):
         self.top_p = top_p
         self.repetition_penalty = repetition_penalty
 
-        # Create output directory for generated audio files
-        self.output_dir = Path("generated_audio")
-        self.output_dir.mkdir(exist_ok=True)
-
-        # Counter for unique filenames
-        self.file_counter = 0
-
         console.print(
             f"[green]✓ Orpheus TTS ready (Voice: {voice}, Local LM Studio)[/green]"
         )
@@ -105,11 +97,6 @@ class OrpheusTTSModel(TTSModel):
             f"[bold magenta]🗣️  Synthesizing: {text[:50]}...[/bold magenta]")
 
         try:
-            # Generate unique filename
-            self.file_counter += 1
-            output_file = self.output_dir / \
-                f"orpheus_tts_{self.file_counter}.wav"
-
             # Format the prompt
             prompt = self._format_prompt(text)
             console.print(
@@ -203,11 +190,6 @@ class OrpheusTTSModel(TTSModel):
 
             wav_data = audio_buffer.getvalue()
 
-            # Save to file
-            with open(output_file, "wb") as f:
-                f.write(wav_data)
-
-            console.print(f"[green]✓ Audio saved to: {output_file}[/green]")
             console.print(
                 f"[green]✓ Speech synthesized ({len(wav_data)} bytes)[/green]")
 
