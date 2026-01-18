@@ -5,6 +5,7 @@ export type AgentState = 'idle' | 'listening' | 'processing' | 'speaking' | 'con
 interface WebSocketMessage {
   type: 'state' | 'transcription' | 'audio_chunk' | 'error'
   data: string
+  processing_time?: number
 }
 
 interface UseWebSocketReturn {
@@ -15,6 +16,7 @@ interface UseWebSocketReturn {
   transcription: string
   error: string | null
   isConnected: boolean
+  processingTime: number | null
 }
 
 export function useWebSocket(
@@ -25,6 +27,7 @@ export function useWebSocket(
   const [transcription, setTranscription] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
+  const [processingTime, setProcessingTime] = useState<number | null>(null)
   
   const wsRef = useRef<WebSocket | null>(null)
   const stateRef = useRef<AgentState>('disconnected')
@@ -74,6 +77,14 @@ export function useWebSocket(
             case 'state':
               console.log('🔄 State change:', message.data)
               setState(message.data as AgentState)
+              // Store processing time if provided (comes with 'speaking' state)
+              if (message.processing_time !== undefined) {
+                setProcessingTime(message.processing_time)
+              }
+              // Clear processing time when starting a new recording or when processing starts again
+              if (message.data === 'listening' || message.data === 'processing') {
+                setProcessingTime(null)
+              }
               break
             case 'transcription':
               console.log('📝 Transcription:', message.data)
@@ -155,6 +166,7 @@ export function useWebSocket(
     transcription,
     error,
     isConnected,
+    processingTime,
   }
 }
 

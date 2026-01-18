@@ -96,8 +96,15 @@ export default function VoiceBot() {
 		}
 	}, [playPCMChunks]);
 
-	const { connect, disconnect, sendMessage, state, error, isConnected } =
-		useWebSocket(handleAudioChunk, handleTranscription);
+	const {
+		connect,
+		disconnect,
+		sendMessage,
+		state,
+		error,
+		isConnected,
+		processingTime,
+	} = useWebSocket(handleAudioChunk, handleTranscription);
 
 	useEffect(() => {
 		connect();
@@ -297,6 +304,11 @@ export default function VoiceBot() {
 				<p className="mt-4 text-white text-lg font-semibold">
 					{getStateLabel()}
 				</p>
+				{processingTime !== null && (
+					<p className="mt-2 text-blue-300 text-sm">
+						⚡ Processing time: {processingTime}s
+					</p>
+				)}
 				{!isRecording &&
 					!isPlaying &&
 					!isPlayingRef.current &&

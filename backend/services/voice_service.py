@@ -289,30 +289,119 @@ class VoiceService:
 
     def _extract_pcm_from_wav(self, wav_data: bytes) -> Optional[bytes]:
         """
-        Extract raw PCM data from WAV file.
+        Extract raw PCM data from WAV file(s).
+        Handles single WAV file or multiple concatenated WAV files.
 
         Args:
-            wav_data: WAV file bytes
+            wav_data: WAV file bytes (may contain multiple WAV files concatenated)
 
         Returns:
             Raw PCM data (Int16) or None if extraction fails
         """
         try:
-            wav_io = io.BytesIO(wav_data)
-            with wave.open(wav_io, 'rb') as wav_file:
-                # Log WAV file parameters
+            all_pcm_chunks = []
+            position = 0
+            wav_count = 0
+
+            # Handle multiple WAV files that may be concatenated
+            # Each WAV file starts with "RIFF" header at position 0
+            while position < len(wav_data):
+                # Check if we have a valid WAV header at current position
+                if position + 12 > len(wav_data):
+                    break
+
+                # Check for "RIFF" header
+                if wav_data[position:position + 4] != b'RIFF':
+                    # Try to find next "RIFF" header
+                    next_riff = wav_data.find(b'RIFF', position + 1)
+                    if next_riff == -1:
+                        # No more WAV files found
+                        break
+                    position = next_riff
+
+                # Read file size from WAV header (offset 4, size 4 bytes, little-endian)
+                file_size = int.from_bytes(
+                    wav_data[position + 4:position + 8], byteorder='little')
+                wav_file_end = position + 8 + file_size
+
+                # Make sure we have enough data
+                if wav_file_end > len(wav_data):
+                    # Try to read as much as we have
+                    wav_file_end = len(wav_data)
+
+                # Extract this WAV file
+                wav_file_data = wav_data[position:wav_file_end]
+
+                try:
+                    wav_io = io.BytesIO(wav_file_data)
+                    with wave.open(wav_io, 'rb') as wav_file:
+                        if wav_count == 0:
+                            # Log WAV file parameters from first file
+                            console.print(
+                                f"[dim]WAV info: {wav_file.getnchannels()} ch, "
+                                f"{wav_file.getframerate()} Hz, "
+                                f"{wav_file.getsampwidth()} bytes/sample, "
+                                f"{wav_file.getnframes()} frames[/dim]"
+                            )
+                        # Read the PCM data (skip the WAV header)
+                        pcm_chunk = wav_file.readframes(wav_file.getnframes())
+                        if pcm_chunk:
+                            all_pcm_chunks.append(pcm_chunk)
+                            wav_count += 1
+                            console.print(
+                                f"[dim]Extracted PCM from WAV {wav_count}: {len(pcm_chunk)} bytes[/dim]"
+                            )
+                except Exception as e:
+                    console.print(
+                        f"[yellow]Warning: Could not extract WAV {wav_count + 1} at position {position}: {e}[/yellow]")
+                    # Move position forward to try next potential WAV file
+                    # Try to find next RIFF header
+                    next_riff = wav_data.find(b'RIFF', position + 1)
+                    if next_riff == -1:
+                        break
+                    position = next_riff
+                    continue
+
+                # Move to next potential WAV file
+                position = wav_file_end
+
+            if wav_count == 0:
+                # Fallback: try reading as single WAV file
+                try:
+                    wav_io = io.BytesIO(wav_data)
+                    with wave.open(wav_io, 'rb') as wav_file:
+                        console.print(
+                            f"[dim]WAV info: {wav_file.getnchannels()} ch, "
+                            f"{wav_file.getframerate()} Hz, "
+                            f"{wav_file.getsampwidth()} bytes/sample, "
+                            f"{wav_file.getnframes()} frames[/dim]"
+                        )
+                        pcm_data = wav_file.readframes(wav_file.getnframes())
+                        if pcm_data:
+                            console.print(
+                                f"[dim]Extracted PCM from single WAV: {len(pcm_data)} bytes[/dim]"
+                            )
+                            return pcm_data
+                except Exception as e:
+                    console.print(
+                        f"[yellow]Could not read as single WAV: {e}[/yellow]")
+
                 console.print(
-                    f"[dim]WAV info: {wav_file.getnchannels()} ch, "
-                    f"{wav_file.getframerate()} Hz, "
-                    f"{wav_file.getsampwidth()} bytes/sample, "
-                    f"{wav_file.getnframes()} frames[/dim]"
-                )
-                # Read the PCM data (skip the WAV header)
-                pcm_data = wav_file.readframes(wav_file.getnframes())
-                return pcm_data
+                    f"[red]Error: Could not extract PCM from any WAV file[/red]")
+                return None
+
+            # Combine all PCM chunks
+            combined_pcm = b"".join(all_pcm_chunks)
+            console.print(
+                f"[green]✓ Extracted PCM from {wav_count} WAV file(s): {len(combined_pcm)} total bytes[/green]"
+            )
+            return combined_pcm
+
         except Exception as e:
             console.print(
                 f"[red]Error extracting PCM from WAV: {e}[/red]")
+            import traceback
+            console.print(f"[red]{traceback.format_exc()}[/red]")
             return None
 
     def get_available_voices(self) -> list[str]:

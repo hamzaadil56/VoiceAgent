@@ -3,6 +3,7 @@
 import json
 import base64
 import asyncio
+import time
 from typing import Optional
 from fastapi import WebSocket, WebSocketDisconnect, HTTPException
 from backend.services.voice_service import VoiceService
@@ -30,7 +31,8 @@ class ConnectionManager:
         """Remove WebSocket connection."""
         if client_id in self.active_connections:
             del self.active_connections[client_id]
-            console.print(f"[yellow]✗ Client disconnected: {client_id}[/yellow]")
+            console.print(
+                f"[yellow]✗ Client disconnected: {client_id}[/yellow]")
 
     async def send_message(self, client_id: str, message: dict):
         """Send message to specific client."""
@@ -38,7 +40,8 @@ class ConnectionManager:
             try:
                 await self.active_connections[client_id].send_json(message)
             except Exception as e:
-                console.print(f"[red]Error sending message to {client_id}: {e}[/red]")
+                console.print(
+                    f"[red]Error sending message to {client_id}: {e}[/red]")
                 self.disconnect(client_id)
 
 
@@ -68,17 +71,17 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         # Accept WebSocket connection FIRST (required by FastAPI)
         await websocket.accept()
-        
+
         # Generate client ID
         client_id = f"client_{id(websocket)}"
-        
+
         # Register connection immediately
         manager.active_connections[client_id] = websocket
         console.print(f"[green]✓ Client connected: {client_id}[/green]")
-        
+
         # Send connection confirmation
         await websocket.send_json({"type": "state", "data": "connected"})
-        
+
         # Try to get client_id from initial message if sent (non-blocking)
         # This is optional - if client sends a connect message, we'll handle it in the main loop
 
@@ -119,7 +122,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         audio_chunk = base64.b64decode(audio_data_b64)
                         audio_buffer.append(audio_chunk)
                     except Exception as e:
-                        console.print(f"[yellow]Error decoding audio: {e}[/yellow]")
+                        console.print(
+                            f"[yellow]Error decoding audio: {e}[/yellow]")
 
                 elif msg_type == "stop_recording":
                     # Process complete audio
@@ -131,7 +135,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             audio_buffer.append(audio_chunk)
                         except Exception:
                             pass
-                    
+
                     if not audio_buffer:
                         await websocket.send_json({
                             "type": "error",
@@ -146,6 +150,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     audio_buffer = []
 
                     try:
+                        # Record start time for processing
+                        processing_start_time = time.time()
+
                         # Process audio through voice agent
                         transcribed_text, audio_response_iter = (
                             await voice_service.process_audio_chunk(complete_audio)
@@ -157,11 +164,19 @@ async def websocket_endpoint(websocket: WebSocket):
                             "data": transcribed_text,
                         })
 
-                        # Stream audio response
-                        await websocket.send_json({"type": "state", "data": "speaking"})
+                        # Calculate processing time (from start to speaking)
+                        processing_time = time.time() - processing_start_time
+
+                        # Stream audio response with processing time
+                        await websocket.send_json({
+                            "type": "state",
+                            "data": "speaking",
+                            "processing_time": round(processing_time, 3)
+                        })
 
                         async for audio_chunk in audio_response_iter:
-                            audio_b64 = base64.b64encode(audio_chunk).decode("utf-8")
+                            audio_b64 = base64.b64encode(
+                                audio_chunk).decode("utf-8")
                             await websocket.send_json({
                                 "type": "audio_chunk",
                                 "data": audio_b64,
@@ -171,7 +186,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         await websocket.send_json({"type": "state", "data": "idle"})
 
                     except Exception as e:
-                        console.print(f"[red]Error processing audio: {e}[/red]")
+                        console.print(
+                            f"[red]Error processing audio: {e}[/red]")
                         await websocket.send_json({
                             "type": "error",
                             "data": f"Processing error: {str(e)}",
@@ -194,6 +210,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_json({"type": "state", "data": "processing"})
 
                     try:
+                        # Record start time for processing
+                        processing_start_time = time.time()
+
                         response_text, audio_response_iter = (
                             await voice_service.process_text_message(text)
                         )
@@ -204,21 +223,32 @@ async def websocket_endpoint(websocket: WebSocket):
                             "data": response_text,
                         })
 
-                        # Stream audio response
-                        await websocket.send_json({"type": "state", "data": "speaking"})
-                        console.print("[cyan]🔊 Sending 'speaking' state to client[/cyan]")
+                        # Calculate processing time (from start to speaking)
+                        processing_time = time.time() - processing_start_time
+
+                        # Stream audio response with processing time
+                        await websocket.send_json({
+                            "type": "state",
+                            "data": "speaking",
+                            "processing_time": round(processing_time, 3)
+                        })
+                        console.print(
+                            "[cyan]🔊 Sending 'speaking' state to client[/cyan]")
 
                         audio_chunk_count = 0
                         async for audio_chunk in audio_response_iter:
                             audio_chunk_count += 1
-                            audio_b64 = base64.b64encode(audio_chunk).decode("utf-8")
-                            console.print(f"[cyan]📤 Sending audio chunk {audio_chunk_count}: {len(audio_b64)} bytes (base64)[/cyan]")
+                            audio_b64 = base64.b64encode(
+                                audio_chunk).decode("utf-8")
+                            console.print(
+                                f"[cyan]📤 Sending audio chunk {audio_chunk_count}: {len(audio_b64)} bytes (base64)[/cyan]")
                             await websocket.send_json({
                                 "type": "audio_chunk",
                                 "data": audio_b64,
                             })
 
-                        console.print(f"[green]✅ Sent {audio_chunk_count} audio chunks total[/green]")
+                        console.print(
+                            f"[green]✅ Sent {audio_chunk_count} audio chunks total[/green]")
                         await websocket.send_json({"type": "state", "data": "idle"})
 
                     except Exception as e:
@@ -254,4 +284,3 @@ async def websocket_endpoint(websocket: WebSocket):
     finally:
         if client_id:
             manager.disconnect(client_id)
-
