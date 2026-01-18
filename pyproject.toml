@@ -1,7 +1,7 @@
 [project]
 name = "voiceagent"
-version = "0.1.0"
-description = "Production-grade voice agent using OpenAI Agents SDK and Groq models"
+version = "0.2.0"
+description = "Voice Agent Platform - Build and deploy AI voice agents with data collection"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -17,6 +17,8 @@ dependencies = [
     "rich>=13.0.0",
     "gtts>=2.5.0",
     "scipy>=1.10.0",
+    "snac>=1.2.1"
+
 ]
 
 [project.optional-dependencies]
