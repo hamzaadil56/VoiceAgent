@@ -1,7 +1,7 @@
-# VoiceAgent Requirements
-# For those preferring pip over UV
+# Voice Agent Platform Requirements
 # Install with: pip install -r requirements.txt
 
+# Core AI & Voice
 groq>=0.11.0
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
@@ -12,9 +12,25 @@ numpy>=1.24.0
 rich>=13.0.0
 gtts>=2.5.0
 
+# OpenAI Agents SDK
+# openai-agents[voice]>=0.1.0
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Data Export
+pandas>=2.0.0
+openpyxl>=3.1.0
+
+# Web Framework
+streamlit>=1.30.0
+
+# Additional utilities
+nest-asyncio>=1.5.0
+
 # Development dependencies (optional)
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
 black>=23.0.0
 ruff>=0.1.0
-
