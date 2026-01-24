@@ -99,6 +99,13 @@ export class AudioRecorder {
   }
 
   /**
+   * Get the audio stream (for silence detection)
+   */
+  getStream(): MediaStream | null {
+    return this.stream
+  }
+
+  /**
    * Convert blob to base64
    */
   async blobToBase64(blob: Blob): Promise<string> {

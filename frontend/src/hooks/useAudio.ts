@@ -1,126 +1,117 @@
-import { useEffect, useRef, useState } from "react";
-import { AudioRecorder } from "../utils/audioRecorder";
-import { AudioPlayer } from "../utils/audioPlayer";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { AudioServiceManager } from "../services/AudioServiceManager";
 
 export function useAudio() {
-	const recorderRef = useRef<AudioRecorder | null>(null);
-	const playerRef = useRef<AudioPlayer | null>(null);
+	const serviceRef = useRef<AudioServiceManager | null>(null);
 	const [isRecording, setIsRecording] = useState(false);
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [isInitialized, setIsInitialized] = useState(false);
 
+	// Single useEffect for initialization
 	useEffect(() => {
-		// Initialize audio components
-		// Create instances immediately (synchronously) so they exist even if initialization is async
-		recorderRef.current = new AudioRecorder();
-		playerRef.current = new AudioPlayer();
+		serviceRef.current = new AudioServiceManager();
 
 		const init = async () => {
 			try {
-				await recorderRef.current!.initialize();
-				await playerRef.current!.initialize();
-
+				await serviceRef.current!.initialize();
 				setIsInitialized(true);
 			} catch (error) {
-				console.error("Failed to initialize audio:", error);
-				// Reset refs on failure
-				recorderRef.current = null;
-				playerRef.current = null;
+				console.error("Failed to initialize audio service:", error);
+				serviceRef.current = null;
 			}
 		};
 
 		init();
 
 		return () => {
-			// Cleanup
-			if (recorderRef.current) {
-				recorderRef.current.cleanup();
-			}
-			if (playerRef.current) {
-				playerRef.current.cleanup();
-			}
+			serviceRef.current?.cleanup();
+			serviceRef.current = null;
 		};
 	}, []);
 
-	const startRecording = async (onChunk?: (base64: string) => void) => {
-		if (!recorderRef.current || !isInitialized) {
-			throw new Error("Audio not initialized");
-		}
-
-		const onChunkWrapper = async (blob: Blob) => {
-			if (onChunk) {
-				const base64 = await recorderRef.current!.blobToBase64(blob);
-				onChunk(base64);
+	const startRecording = useCallback(
+		async (onChunk?: (base64: string) => void) => {
+			if (!serviceRef.current || !isInitialized) {
+				throw new Error("Audio not initialized");
 			}
-		};
 
-		recorderRef.current.startRecording(onChunkWrapper);
-		setIsRecording(true);
-	};
+			await serviceRef.current.startRecording(onChunk);
+			setIsRecording(true);
+		},
+		[isInitialized]
+	);
 
-	const stopRecording = async (): Promise<string> => {
-		if (!recorderRef.current) {
+	const stopRecording = useCallback(async (): Promise<string> => {
+		if (!serviceRef.current) {
 			throw new Error("Recorder not initialized");
 		}
 
-		const blob = await recorderRef.current.stopRecording();
+		const result = await serviceRef.current.stopRecording();
 		setIsRecording(false);
-		return await recorderRef.current.blobToBase64(blob);
-	};
+		return result;
+	}, []);
 
-	const playAudio = async (base64Audio: string) => {
-		if (!playerRef.current || !isInitialized) {
-			throw new Error("Audio player not initialized");
+	const playAudio = useCallback(
+		async (base64Audio: string) => {
+			if (!serviceRef.current || !isInitialized) {
+				throw new Error("Audio player not initialized");
+			}
+
+			setIsPlaying(true);
+			try {
+				await serviceRef.current.playAudio(base64Audio);
+			} finally {
+				setIsPlaying(false);
+			}
+		},
+		[isInitialized]
+	);
+
+	const playPCMAudio = useCallback(async (base64PCM: string) => {
+		if (!serviceRef.current) {
+			throw new Error("Audio service not initialized");
 		}
 
 		setIsPlaying(true);
 		try {
-			await playerRef.current.playChunk(base64Audio);
-		} finally {
-			setIsPlaying(false);
-		}
-	};
-
-	const playPCMAudio = async (base64PCM: string) => {
-		// Ensure player instance exists (create if initialization hasn't completed yet)
-		if (!playerRef.current) {
-			console.log(
-				"⚠️ AudioPlayer not initialized yet, creating instance..."
-			);
-			playerRef.current = new AudioPlayer();
-		}
-
-		// playPCMChunk will handle audioContext initialization if needed
-		setIsPlaying(true);
-		try {
-			await playerRef.current.playPCMChunk(base64PCM);
+			await serviceRef.current.playPCMAudio(base64PCM);
 		} catch (error) {
 			console.error("Error in playPCMChunk:", error);
 			throw error;
 		} finally {
 			setIsPlaying(false);
 		}
-	};
+	}, []);
 
-	const playPCMChunks = async (base64Chunks: string[]) => {
-		// Ensure player instance exists
-		if (!playerRef.current) {
-			console.log(
-				"⚠️ AudioPlayer not initialized yet, creating instance..."
-			);
-			playerRef.current = new AudioPlayer();
+	const playPCMChunks = useCallback(async (base64Chunks: string[]) => {
+		if (!serviceRef.current) {
+			throw new Error("Audio service not initialized");
 		}
 
 		setIsPlaying(true);
 		try {
-			await playerRef.current.playPCMChunks(base64Chunks);
+			await serviceRef.current.playPCMChunks(base64Chunks);
 		} catch (error) {
 			console.error("Error in playPCMChunks:", error);
 			throw error;
 		} finally {
 			setIsPlaying(false);
 		}
-	};
+	}, []);
+
+	// Update isRecording state based on service
+	useEffect(() => {
+		if (!serviceRef.current || !isInitialized) {
+			return;
+		}
+
+		const interval = setInterval(() => {
+			const recording = serviceRef.current?.isRecording() ?? false;
+			setIsRecording(recording);
+		}, 100); // Check every 100ms
+
+		return () => clearInterval(interval);
+	}, [isInitialized]);
 
 	return {
 		isInitialized,
@@ -130,6 +121,6 @@ export function useAudio() {
 		stopRecording,
 		playAudio,
 		playPCMAudio,
-		playPCMChunks, // New method for buffered chunks
+		playPCMChunks,
 	};
 }

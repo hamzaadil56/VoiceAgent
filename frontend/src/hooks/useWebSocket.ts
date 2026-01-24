@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import {
+	WebSocketServiceManager,
+	WebSocketServiceCallbacks,
+} from "../services/WebSocketServiceManager";
 
 export type AgentState =
 	| "idle"
@@ -7,12 +11,6 @@ export type AgentState =
 	| "speaking"
 	| "connected"
 	| "disconnected";
-
-interface WebSocketMessage {
-	type: "state" | "transcription" | "audio_chunk" | "error";
-	data: string;
-	processing_time?: number;
-}
 
 interface UseWebSocketReturn {
 	connect: () => void;
@@ -35,147 +33,60 @@ export function useWebSocket(
 	const [isConnected, setIsConnected] = useState(false);
 	const [processingTime, setProcessingTime] = useState<number | null>(null);
 
-	const wsRef = useRef<WebSocket | null>(null);
-	const stateRef = useRef<AgentState>("disconnected");
-	const clientIdRef = useRef<string>(
-		`client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-	);
+	const serviceRef = useRef<WebSocketServiceManager | null>(null);
 
-	// Keep state ref in sync
+	// Single useEffect for initialization
 	useEffect(() => {
-		stateRef.current = state;
-	}, [state]);
+		const callbacks: WebSocketServiceCallbacks = {
+			onStateChange: (newState) => {
+				setState(newState);
+				// Update isConnected based on state
+				setIsConnected(newState !== "disconnected");
+			},
+			onTranscription: (text) => {
+				setTranscription(text);
+				onTranscription?.(text);
+			},
+			onAudioChunk: (base64Audio) => {
+				onAudioChunk?.(base64Audio);
+			},
+			onError: (errorMsg) => {
+				setError(errorMsg);
+			},
+			onProcessingTime: (time) => {
+				setProcessingTime(time);
+			},
+		};
 
-	const connect = useCallback(() => {
-		if (wsRef.current?.readyState === WebSocket.OPEN) {
-			return;
-		}
+		serviceRef.current = new WebSocketServiceManager(callbacks);
 
-		try {
-			const wsUrl =
-				import.meta.env.VITE_WS_URL || "ws://localhost:8000/ws";
-			const ws = new WebSocket(wsUrl);
+		return () => {
+			serviceRef.current?.cleanup();
+			serviceRef.current = null;
+		};
+	}, []); // Empty deps - callbacks updated separately
 
-			ws.onopen = () => {
-				console.log("WebSocket connected");
-				setIsConnected(true);
-				setState("connected");
-				setError(null);
-
-				// Send initial connection message (optional - backend accepts immediately)
-				try {
-					ws.send(
-						JSON.stringify({
-							type: "connect",
-							client_id: clientIdRef.current,
-						})
-					);
-				} catch (e) {
-					console.warn("Could not send initial connect message:", e);
-				}
-			};
-
-			ws.onmessage = (event) => {
-				try {
-					const message: WebSocketMessage = JSON.parse(event.data);
-					console.log("📨 WebSocket message received:", {
-						type: message.type,
-						dataLength: message.data?.length,
-						dataPreview: message.data?.substring(0, 100),
-					});
-
-					switch (message.type) {
-						case "state":
-							console.log("🔄 State change:", message.data);
-							setState(message.data as AgentState);
-							// Store processing time if provided (comes with 'speaking' state)
-							if (message.processing_time !== undefined) {
-								setProcessingTime(message.processing_time);
-							}
-							// Clear processing time when starting a new recording or when processing starts again
-							if (
-								message.data === "listening" ||
-								message.data === "processing"
-							) {
-								setProcessingTime(null);
-							}
-							break;
-						case "transcription":
-							console.log("📝 Transcription:", message.data);
-							setTranscription(message.data);
-							if (onTranscription) {
-								onTranscription(message.data);
-							}
-							break;
-						case "audio_chunk":
-							console.log(
-								"🎵 Audio chunk received, length:",
-								message.data?.length
-							);
-							if (onAudioChunk) {
-								onAudioChunk(message.data);
-							}
-							break;
-						case "error":
-							setError(message.data);
-							console.error("❌ WebSocket error:", message.data);
-							break;
-					}
-				} catch (err) {
-					console.error("Error parsing WebSocket message:", err);
-				}
-			};
-
-			ws.onerror = (err) => {
-				console.error("WebSocket error:", err);
-				setError("WebSocket connection error");
-				setState("disconnected");
-				setIsConnected(false);
-			};
-
-			ws.onclose = () => {
-				console.log("WebSocket disconnected");
-				setState("disconnected");
-				setIsConnected(false);
-			};
-
-			wsRef.current = ws;
-		} catch (err) {
-			console.error("Failed to connect WebSocket:", err);
-			setError("Failed to connect to server");
-			setState("disconnected");
-			setIsConnected(false);
+	// Update callbacks when they change
+	useEffect(() => {
+		if (serviceRef.current) {
+			serviceRef.current.updateCallbacks({
+				onTranscription,
+				onAudioChunk,
+			});
 		}
 	}, [onAudioChunk, onTranscription]);
 
+	const connect = useCallback(() => {
+		serviceRef.current?.connect();
+	}, []);
+
 	const disconnect = useCallback(() => {
-		if (wsRef.current) {
-			wsRef.current.close();
-			wsRef.current = null;
-		}
-		setState("disconnected");
-		setIsConnected(false);
+		serviceRef.current?.disconnect();
 	}, []);
 
 	const sendMessage = useCallback((type: string, data: string) => {
-		if (wsRef.current?.readyState === WebSocket.OPEN) {
-			wsRef.current.send(
-				JSON.stringify({
-					type,
-					data,
-					client_id: clientIdRef.current,
-				})
-			);
-		} else {
-			console.warn("WebSocket is not connected");
-		}
+		serviceRef.current?.sendMessage(type, data);
 	}, []);
-
-	useEffect(() => {
-		return () => {
-			disconnect();
-		};
-	}, [disconnect]);
 
 	return {
 		connect,

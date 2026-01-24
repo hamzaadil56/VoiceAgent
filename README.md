@@ -226,8 +226,8 @@ This launches the **interactive menu** where you can:
 
 # Or manually:
 # Terminal 1 - Backend
-cd backend
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+python -m uvicorn backend.main:app --host localhost --port 8000 --reload
 
 # Terminal 2 - Frontend
 cd frontend
