@@ -56,6 +56,8 @@ class Settings(BaseSettings):
         default=500, description="Maximum tokens for LLM response")
     temperature: float = Field(
         default=0.7, description="Temperature for LLM sampling")
+    max_turns: int = Field(
+        default=5, ge=1, le=5, description="Maximum number of conversation turns (1-5)")
 
     def __repr__(self) -> str:
         """String representation with masked API keys."""

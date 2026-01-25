@@ -41,6 +41,9 @@ class VoiceService:
         """Update agent settings and reinitialize."""
         for key, value in kwargs.items():
             if hasattr(self.settings, key):
+                # Validate max_turns if provided
+                if key == "max_turns" and value is not None:
+                    value = max(1, min(5, int(value)))  # Clamp between 1 and 5
                 setattr(self.settings, key, value)
         self._initialize_agent()
 
@@ -417,4 +420,5 @@ class VoiceService:
             "max_tokens": self.settings.max_tokens,
             "stt_model": self.settings.stt_model,
             "llm_model": self.settings.llm_model,
+            "max_turns": self.settings.max_turns,
         }

@@ -31,6 +31,7 @@ export class VoiceBotViewModel {
 	private isCollecting = false;
 	private isPlayingRef = false;
 	private turnCount = 0;
+	private maxTurns = 5; // Default, will be updated from settings
 	private callbacks: VoiceBotViewModelCallbacks;
 
 	// Services
@@ -149,6 +150,34 @@ export class VoiceBotViewModel {
 			this.effectiveState = "idle";
 			console.log("🔄 Returned to IDLE state");
 			this.notifyStateChange();
+
+			// Automatically restart listening if max turns not reached
+			// Note: turnCount was already incremented before this method was called
+			if (this.turnCount < this.maxTurns) {
+				console.log(
+					"🔄 Auto-restarting listening after agent finished speaking"
+				);
+				// Small delay to ensure state is properly reset
+				setTimeout(() => {
+					// Double-check before starting (in case turnCount changed)
+					if (this.turnCount < this.maxTurns) {
+						this.startRecording().catch((err) => {
+							console.error(
+								"Error auto-restarting recording:",
+								err
+							);
+						});
+					} else {
+						console.log(
+							`⚠️ Max turns (${this.maxTurns}) reached. Session stopped.`
+						);
+					}
+				}, 500);
+			} else {
+				console.log(
+					`⚠️ Max turns (${this.maxTurns}) reached. Session stopped.`
+				);
+			}
 		}
 	}
 
@@ -185,6 +214,14 @@ export class VoiceBotViewModel {
 	async startRecording() {
 		if (!this.isInitialized || !this.isConnected) {
 			alert("Audio not initialized or not connected to server");
+			return;
+		}
+
+		// Check if max turns reached
+		if (this.turnCount >= this.maxTurns) {
+			console.log(
+				`Cannot start recording - max turns (${this.maxTurns}) reached`
+			);
 			return;
 		}
 
@@ -296,12 +333,18 @@ export class VoiceBotViewModel {
 	// Increment turn count after playback
 	incrementTurnCount() {
 		this.turnCount += 1;
-		if (this.turnCount >= 3) {
+		if (this.turnCount >= this.maxTurns) {
 			console.log(
-				"⚠️ Turn limit reached (3 turns). Please refresh to continue."
+				`⚠️ Turn limit reached (${this.maxTurns} turns). Session stopped.`
 			);
 		}
 		this.notifyStateChange();
+	}
+
+	// Set max turns from settings
+	setMaxTurns(maxTurns: number) {
+		this.maxTurns = Math.min(Math.max(1, maxTurns), 5); // Clamp between 1 and 5
+		console.log(`📊 Max turns set to: ${this.maxTurns}`);
 	}
 
 	// Get current state
@@ -369,6 +412,11 @@ export class VoiceBotViewModel {
 	// Get PCM chunks for playback
 	getPCMChunks(): string[] {
 		return [...this.pcmChunksBuffer];
+	}
+
+	// Get max turns
+	getMaxTurns(): number {
+		return this.maxTurns;
 	}
 
 	// Notify state change

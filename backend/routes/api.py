@@ -21,6 +21,7 @@ class SettingsUpdate(BaseModel):
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
     agent_instructions: Optional[str] = None
+    max_turns: Optional[int] = None
 
 
 @router.get("/health")

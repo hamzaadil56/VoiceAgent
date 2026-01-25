@@ -7,6 +7,7 @@ interface SettingsData {
   max_tokens: number
   stt_model: string
   llm_model: string
+  max_turns: number
 }
 
 const AVAILABLE_VOICES = ['tara', 'leah', 'jess', 'leo', 'dan', 'mia', 'zac', 'zoe']
@@ -70,6 +71,9 @@ export default function Settings() {
     }
     if (formData.get('max_tokens')) {
       updates.max_tokens = parseInt(formData.get('max_tokens') as string)
+    }
+    if (formData.get('max_turns')) {
+      updates.max_turns = parseInt(formData.get('max_turns') as string)
     }
 
     try {
@@ -195,6 +199,24 @@ export default function Settings() {
             defaultValue={settings.max_tokens}
             className="w-full px-4 py-2 bg-white/20 text-white rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
           />
+        </div>
+
+        <div>
+          <label className="block text-white font-semibold mb-2">
+            Max Turns
+          </label>
+          <input
+            type="number"
+            name="max_turns"
+            min="1"
+            max="5"
+            step="1"
+            defaultValue={settings.max_turns}
+            className="w-full px-4 py-2 bg-white/20 text-white rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+          />
+          <p className="text-white/60 text-sm mt-1">
+            Maximum number of conversation turns (1-5)
+          </p>
         </div>
 
         <div className="bg-white/5 rounded-lg p-4">

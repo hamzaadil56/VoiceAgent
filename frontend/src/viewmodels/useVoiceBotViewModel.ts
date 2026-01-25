@@ -65,6 +65,24 @@ export function useVoiceBotViewModel() {
 			checkInterval: 100,
 		});
 
+		// Fetch settings to get max_turns
+		const fetchSettings = async () => {
+			try {
+				const response = await fetch(
+					"http://localhost:8000/api/settings"
+				);
+				if (response.ok) {
+					const data = await response.json();
+					if (viewModelRef.current && data.max_turns !== undefined) {
+						viewModelRef.current.setMaxTurns(data.max_turns);
+					}
+				}
+			} catch (error) {
+				console.error("Failed to fetch settings:", error);
+			}
+		};
+		fetchSettings();
+
 		// Set up WebSocket callbacks
 		wsServiceRef.current.updateCallbacks({
 			onAudioChunk: (base64Audio: string) => {
@@ -86,8 +104,9 @@ export function useVoiceBotViewModel() {
 						// Trigger playback
 						const playBufferedAudio = async () => {
 							if (viewModelRef.current) {
-								await viewModelRef.current.playBufferedAudio();
+								// Increment turn count before playing (so we can check limit during playback)
 								viewModelRef.current.incrementTurnCount();
+								await viewModelRef.current.playBufferedAudio();
 							}
 						};
 						playBufferedAudio();
@@ -183,6 +202,13 @@ export function useVoiceBotViewModel() {
 		return false;
 	}, []);
 
+	const getMaxTurns = useCallback(() => {
+		if (viewModelRef.current) {
+			return viewModelRef.current.getMaxTurns();
+		}
+		return 5; // Default
+	}, []);
+
 	return {
 		// State
 		...viewModelState,
@@ -192,6 +218,7 @@ export function useVoiceBotViewModel() {
 		handleTextSubmit,
 		getStateLabel,
 		canStartRecording,
+		getMaxTurns,
 		// Direct access to some values for convenience
 		isRecording,
 		isPlaying: viewModelState.isPlaying,

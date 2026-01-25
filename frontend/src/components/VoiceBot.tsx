@@ -14,6 +14,7 @@ export default function VoiceBot() {
 		startRecording,
 		stopRecording,
 		getStateLabel,
+		getMaxTurns,
 	} = useVoiceBotViewModel();
 
 	const handleStartRecording = async () => {
@@ -32,7 +33,9 @@ export default function VoiceBot() {
 					state={effectiveState}
 					size={200}
 					onClick={
-						isRecording
+						turnCount >= getMaxTurns()
+							? undefined // Disable click when max turns reached
+							: isRecording
 							? handleStopRecording
 							: effectiveState === "idle" ||
 							  effectiveState === "connected"
@@ -51,7 +54,8 @@ export default function VoiceBot() {
 				{!isRecording &&
 					!isPlaying &&
 					(effectiveState === "idle" ||
-						effectiveState === "connected") && (
+						effectiveState === "connected") &&
+					turnCount < getMaxTurns() && (
 						<p className="mt-2 text-blue-300 text-sm">
 							👆 Tap the circle above to start talking
 						</p>
@@ -62,9 +66,15 @@ export default function VoiceBot() {
 						speaking
 					</p>
 				)}
-				{turnCount >= 3 && (
+				{turnCount >= getMaxTurns() && (
 					<p className="mt-2 text-yellow-300 text-sm font-semibold">
-						⚠️ Turn limit reached. Please refresh to continue.
+						⚠️ Turn limit reached ({getMaxTurns()} turns). Session
+						stopped. Please refresh to continue.
+					</p>
+				)}
+				{turnCount > 0 && turnCount < getMaxTurns() && (
+					<p className="mt-2 text-white/60 text-sm">
+						Turn {turnCount} of {getMaxTurns()}
 					</p>
 				)}
 				{error && <p className="mt-2 text-red-300 text-sm">{error}</p>}
