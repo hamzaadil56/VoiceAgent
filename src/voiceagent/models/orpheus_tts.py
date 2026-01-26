@@ -29,7 +29,7 @@ class OrpheusTTSModel(TTSModel):
 
     def __init__(
         self,
-        base_url: str = "http://localhost:1234/v1",
+        base_url: str,
         voice: str = "tara",
         temperature: float = 0.6,
         top_p: float = 0.9,
@@ -39,12 +39,13 @@ class OrpheusTTSModel(TTSModel):
         Initialize Orpheus TTS model.
 
         Args:
-            base_url: LM Studio server URL
+            base_url: LM Studio server URL (required, must be provided from settings)
             voice: Voice to use (tara, leah, jess, leo, dan, mia, zac, zoe)
             temperature: Temperature for generation
             top_p: Top-p sampling parameter
             repetition_penalty: Repetition penalty
         """
+
         if voice not in self.VOICES:
             console.print(
                 f"[yellow]⚠ Invalid voice '{voice}', using 'tara'[/yellow]")

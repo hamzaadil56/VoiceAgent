@@ -37,7 +37,8 @@ async def health_check():
 async def get_settings():
     """Get current agent settings."""
     if not voice_service:
-        raise HTTPException(status_code=503, detail="Voice service not initialized")
+        raise HTTPException(
+            status_code=503, detail="Voice service not initialized")
     return voice_service.get_settings()
 
 
@@ -45,7 +46,8 @@ async def get_settings():
 async def update_settings(settings_update: SettingsUpdate):
     """Update agent settings."""
     if not voice_service:
-        raise HTTPException(status_code=503, detail="Voice service not initialized")
+        raise HTTPException(
+            status_code=503, detail="Voice service not initialized")
 
     update_dict = settings_update.model_dump(exclude_unset=True)
     voice_service.update_settings(**update_dict)
@@ -57,8 +59,6 @@ async def update_settings(settings_update: SettingsUpdate):
 async def get_voices():
     """Get available TTS voices."""
     if not voice_service:
-        raise HTTPException(status_code=503, detail="Voice service not initialized")
+        raise HTTPException(
+            status_code=503, detail="Voice service not initialized")
     return {"voices": voice_service.get_available_voices()}
-
-
-

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # LM Studio Configuration
     lm_studio_url: str = Field(
-        default="http://localhost:1234/v1", description="LM Studio server URL"
+        ..., description="LM Studio server URL"
     )
     tts_voice: str = Field(
         default="tara",

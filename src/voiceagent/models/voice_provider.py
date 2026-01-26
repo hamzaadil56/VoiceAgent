@@ -11,8 +11,8 @@ class CustomVoiceModelProvider(VoiceModelProvider):
     def __init__(
         self,
         groq_api_key: str,
+        lm_studio_url: str,
         stt_model: str = "whisper-large-v3",
-        lm_studio_url: str = "http://localhost:1234/v1",
         tts_voice: str = "tara",
     ):
         """
@@ -20,13 +20,14 @@ class CustomVoiceModelProvider(VoiceModelProvider):
 
         Args:
             groq_api_key: Groq API key for STT
+            lm_studio_url: LM Studio server URL (required, must be provided from settings)
             stt_model: STT model name
-            lm_studio_url: LM Studio server URL
             tts_voice: Voice for Orpheus TTS
         """
+
         self.groq_api_key = groq_api_key
         self.stt_model_name = stt_model
-        
+
         # Create instances
         self._stt = GroqSTTModel(api_key=groq_api_key, model=stt_model)
         self._tts = OrpheusTTSModel(base_url=lm_studio_url, voice=tts_voice)
