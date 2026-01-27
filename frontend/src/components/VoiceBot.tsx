@@ -26,12 +26,12 @@ export default function VoiceBot() {
 	};
 
 	return (
-		<div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8">
+		<div className="glass-elevated rounded-3xl shadow-2xl p-10 border border-border/50">
 			{/* Status and Circle */}
-			<div className="flex flex-col items-center mb-8">
+			<div className="flex flex-col items-center mb-10">
 				<AnimatedCircle
 					state={effectiveState}
-					size={200}
+					size={220}
 					onClick={
 						turnCount >= getMaxTurns()
 							? undefined // Disable click when max turns reached
@@ -43,41 +43,53 @@ export default function VoiceBot() {
 							: undefined // Disable click during processing/speaking
 					}
 				/>
-				<p className="mt-4 text-white text-lg font-semibold">
+				<p className="mt-6 text-text-primary text-xl font-heading font-semibold tracking-tight">
 					{getStateLabel()}
 				</p>
 				{processingTime !== null && (
-					<p className="mt-2 text-blue-300 text-sm">
-						⚡ Processing time: {processingTime}s
-					</p>
+					<div className="mt-3 flex items-center gap-2 px-4 py-2 glass rounded-full">
+						<div className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse"></div>
+						<p className="text-accent-secondary text-sm font-body font-medium">
+							Processing: {processingTime}s
+						</p>
+					</div>
 				)}
 				{!isRecording &&
 					!isPlaying &&
 					(effectiveState === "idle" ||
 						effectiveState === "connected") &&
 					turnCount < getMaxTurns() && (
-						<p className="mt-2 text-blue-300 text-sm">
-							👆 Tap the circle above to start talking
+						<p className="mt-4 text-text-secondary text-sm font-body animate-fade-in">
+							Tap the circle above to start talking
 						</p>
 					)}
 				{isRecording && !isPlaying && (
-					<p className="mt-2 text-green-300 text-sm animate-pulse">
-						✓ Listening - Tap circle or "Stop" when you finish
-						speaking
-					</p>
+					<div className="mt-4 flex items-center gap-2 px-4 py-2 glass rounded-full border border-success/30">
+						<div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+						<p className="text-success text-sm font-body font-medium animate-pulse">
+							Listening — Tap circle when finished
+						</p>
+					</div>
 				)}
 				{turnCount >= getMaxTurns() && (
-					<p className="mt-2 text-yellow-300 text-sm font-semibold">
-						⚠️ Turn limit reached ({getMaxTurns()} turns). Session
-						stopped. Please refresh to continue.
-					</p>
+					<div className="mt-4 px-5 py-3 glass rounded-xl border border-warning/40 bg-warning/5">
+						<p className="text-warning text-sm font-body font-semibold text-center">
+							Turn limit reached ({getMaxTurns()} turns). Refresh to continue.
+						</p>
+					</div>
 				)}
 				{turnCount > 0 && turnCount < getMaxTurns() && (
-					<p className="mt-2 text-white/60 text-sm">
-						Turn {turnCount} of {getMaxTurns()}
-					</p>
+					<div className="mt-4 px-4 py-2 glass rounded-full">
+						<p className="text-text-tertiary text-xs font-body font-medium tracking-wide uppercase">
+							Turn {turnCount} of {getMaxTurns()}
+						</p>
+					</div>
 				)}
-				{error && <p className="mt-2 text-red-300 text-sm">{error}</p>}
+				{error && (
+					<div className="mt-4 px-5 py-3 glass rounded-xl border border-error/40 bg-error/5">
+						<p className="text-error text-sm font-body">{error}</p>
+					</div>
+				)}
 			</div>
 
 			{/* Controls */}
@@ -129,24 +141,25 @@ export default function VoiceBot() {
 
 			{/* Conversation History */}
 			{conversationHistory.length > 0 && (
-				<div className="bg-white/5 rounded-lg p-4 max-h-64 overflow-y-auto">
-					<h3 className="text-white font-semibold mb-3">
+				<div className="glass rounded-2xl p-6 max-h-80 overflow-y-auto border border-border/30">
+					<h3 className="text-text-primary font-heading font-semibold mb-4 text-lg tracking-tight">
 						Conversation
 					</h3>
-					<div className="space-y-2">
+					<div className="space-y-3">
 						{conversationHistory.map((msg, idx) => (
 							<div
 								key={idx}
-								className={`p-2 rounded ${
+								className={`p-4 rounded-xl border transition-all duration-300 animate-slide-up ${
 									msg.role === "user"
-										? "bg-blue-500/20 text-blue-100"
-										: "bg-green-500/20 text-green-100"
+										? "bg-accent-primary/10 border-accent-primary/30 text-text-primary"
+										: "bg-accent-secondary/10 border-accent-secondary/30 text-text-primary"
 								}`}
+								style={{ animationDelay: `${idx * 0.1}s` }}
 							>
-								<span className="font-semibold">
-									{msg.role === "user" ? "You: " : "Agent: "}
+								<span className="font-body font-semibold text-xs uppercase tracking-wider mb-1 block opacity-70">
+									{msg.role === "user" ? "You" : "Agent"}
 								</span>
-								{msg.text}
+								<p className="font-body text-sm leading-relaxed">{msg.text}</p>
 							</div>
 						))}
 					</div>
@@ -154,15 +167,19 @@ export default function VoiceBot() {
 			)}
 
 			{/* Connection Status */}
-			<div className="mt-4 text-center">
-				<span
-					className={`inline-block w-3 h-3 rounded-full mr-2 ${
-						isConnected ? "bg-green-400" : "bg-red-400"
-					}`}
-				/>
-				<span className="text-white/80 text-sm">
-					{isConnected ? "Connected" : "Disconnected"}
-				</span>
+			<div className="mt-6 text-center">
+				<div className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full">
+					<span
+						className={`inline-block w-2.5 h-2.5 rounded-full ${
+							isConnected 
+								? "bg-success shadow-lg shadow-success/50 animate-pulse" 
+								: "bg-error shadow-lg shadow-error/50"
+						}`}
+					/>
+					<span className="text-text-secondary text-xs font-body font-medium uppercase tracking-wider">
+						{isConnected ? "Connected" : "Disconnected"}
+					</span>
+				</div>
 			</div>
 		</div>
 	);
