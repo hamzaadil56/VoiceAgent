@@ -1,0 +1,173 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Color System - Dark Tech Aesthetic */
+  --color-bg-primary: #0a0a0f;
+  --color-bg-secondary: #111118;
+  --color-bg-tertiary: #1a1a24;
+  --color-surface: rgba(26, 26, 36, 0.8);
+  --color-surface-elevated: rgba(34, 34, 48, 0.95);
+  
+  --color-accent-primary: #00d9ff;
+  --color-accent-secondary: #00ffc8;
+  --color-accent-tertiary: #7b61ff;
+  
+  --color-text-primary: #f0f0f5;
+  --color-text-secondary: #b8b8c8;
+  --color-text-tertiary: #7a7a8a;
+  
+  --color-success: #00ff88;
+  --color-warning: #ffb84d;
+  --color-error: #ff4d6d;
+  --color-info: #00d9ff;
+  
+  --color-border: rgba(0, 217, 255, 0.2);
+  --color-border-hover: rgba(0, 217, 255, 0.4);
+  
+  /* Typography */
+  --font-heading: 'Bricolage Grotesque', -apple-system, sans-serif;
+  --font-body: 'Switzer', -apple-system, sans-serif;
+  
+  /* Spacing & Effects */
+  --blur-glass: blur(20px);
+  --shadow-glow: 0 0 40px rgba(0, 217, 255, 0.3);
+  --shadow-glow-strong: 0 0 60px rgba(0, 217, 255, 0.5);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 400;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  position: relative;
+  background: var(--color-bg-primary);
+}
+
+/* Animated Background Pattern */
+#root::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(0, 217, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(123, 97, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(0, 255, 200, 0.1) 0%, transparent 60%),
+    linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  animation: backgroundShift 20s ease-in-out infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@keyframes backgroundShift {
+  0%, 100% {
+    background-position: 0% 0%, 100% 100%, 50% 50%, 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%, 0% 0%, 50% 50%, 0% 0%;
+  }
+}
+
+/* Geometric Pattern Overlay */
+#root::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(0, 217, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 217, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  z-index: 0;
+  pointer-events: none;
+  animation: patternMove 30s linear infinite;
+}
+
+@keyframes patternMove {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(50px, 50px);
+  }
+}
+
+/* Typography Styles */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-accent-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-secondary);
+}
+
+/* Glass Morphism Utility */
+.glass {
+  background: var(--color-surface);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--color-border);
+}
+
+.glass-elevated {
+  background: var(--color-surface-elevated);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--color-border-hover);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Glow Effects */
+.glow-primary {
+  box-shadow: var(--shadow-glow);
+}
+
+.glow-strong {
+  box-shadow: var(--shadow-glow-strong);
+}
+
+/* Smooth Transitions */
+* {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+
+

@@ -1,6 +1,7 @@
 """Text-to-Speech service using Google TTS (gTTS) - free, no API key needed."""
 
 from gtts import gTTS
+import tempfile
 from pathlib import Path
 from rich.console import Console
 
@@ -21,13 +22,6 @@ class TextToSpeechService:
         self.language = "en"
         self.slow = False
 
-        # Create output directory for generated audio files
-        self.output_dir = Path("generated_audio")
-        self.output_dir.mkdir(exist_ok=True)
-
-        # Counter for unique filenames
-        self.file_counter = 0
-
         console.print(
             f"[green]✓ Google TTS ready (free, no API key needed)[/green]")
 
@@ -46,22 +40,27 @@ class TextToSpeechService:
             f"[bold magenta]🗣️  Synthesizing: {text[:50]}...[/bold magenta]")
 
         try:
-            # Generate unique filename
-            self.file_counter += 1
-            output_file = self.output_dir / \
-                f"tts_output_{self.file_counter}.mp3"
-
             # Generate speech using gTTS
             console.print(f"[cyan]Generating audio with Google TTS...[/cyan]")
 
-            tts = gTTS(text=text, lang=self.language, slow=self.slow)
-            tts.save(str(output_file))
+            # Use temporary file to avoid saving to disk permanently
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp_file:
+                tmp_path = tmp_file.name
+                tts = gTTS(text=text, lang=self.language, slow=self.slow)
+                tts.save(tmp_path)
 
             # Read the generated file
-            with open(output_file, 'rb') as f:
-                audio_data = f.read()
+            try:
+                with open(tmp_path, 'rb') as f:
+                    audio_data = f.read()
+            finally:
+                # Clean up temporary file
+                import os
+                try:
+                    os.unlink(tmp_path)
+                except:
+                    pass
 
-            console.print(f"[green]✓ Audio saved to: {output_file}[/green]")
             console.print(
                 f"[green]✓ Speech synthesized ({len(audio_data)} bytes)[/green]")
             return audio_data
