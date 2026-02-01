@@ -21,6 +21,7 @@ export interface VoiceBotViewModelState {
 
 export interface VoiceBotViewModelCallbacks {
 	onStateChange?: (state: VoiceBotViewModelState) => void;
+	onVolumeChange?: (volume: number) => void; // 0–1 normalized mic amplitude
 }
 
 export class VoiceBotViewModel {
@@ -249,10 +250,13 @@ export class VoiceBotViewModel {
 			this.audioChunksBuffer = [];
 			console.log("🎤 Starting recording - buffering chunks locally");
 
-			// Set up silence detection callback
+			// Set up silence detection callbacks
 			this.audioService.setCallbacks({
 				onSilenceDetected: () => {
 					this.handleSilenceDetected();
+				},
+				onVolumeChange: (vol) => {
+					this.callbacks.onVolumeChange?.(vol);
 				},
 			});
 

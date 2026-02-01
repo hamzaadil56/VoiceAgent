@@ -1,6 +1,7 @@
 """Text-to-Speech service using Orpheus TTS via LM Studio with SNAC decoder."""
 
 import io
+import os
 import wave
 import json
 from typing import AsyncIterator
@@ -105,10 +106,13 @@ class OrpheusTTSModel(TTSModel):
 
             # Call LM Studio /completions endpoint with STREAMING
             # This is crucial - Orpheus TTS requires streaming to get custom tokens
+            api_key = os.environ.get("TTS_API_KEY", "")
+            headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
             async with httpx.AsyncClient() as client:
                 async with client.stream(
                     "POST",
-                    f"{self.base_url}/completions",
+                    f"{self.base_url}/v1/completions",
+                    headers=headers,
                     json={
                         "model": "local-model",
                         "prompt": prompt,

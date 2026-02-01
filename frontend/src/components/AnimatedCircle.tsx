@@ -1,190 +1,451 @@
-import { AgentState } from '../hooks/useWebSocket'
+/**
+ * AnimatedCircle — Premium visual feedback for AI voice assistant
+ *
+ * Communicates state through motion and color alone. Designed for production-grade
+ * quality: organic, fluid, reactive — never rigid or mechanical.
+ *
+ * States: idle | listening | processing | speaking
+ * Uses spring physics for natural, anxiety-reducing motion.
+ */
 
-interface AnimatedCircleProps {
-  state: AgentState
-  size?: number
-  onClick?: () => void
+import { motion, useSpring, useTransform } from "framer-motion";
+import { useEffect, useMemo } from "react";
+import { AgentState } from "../hooks/useWebSocket";
+
+// Spring config — tuned for organic feel, responsive without jitter
+const SPRING_RESPONSIVE = { stiffness: 120, damping: 18 };
+
+// Animation constants — documented for maintainability
+const IDLE_SCALE_RANGE = 0.03; // 1.0 → 1.03 breathing amplitude
+const LISTENING_SCALE_RESPONSE = 0.25; // Audio drives 0–0.25 additional scale
+const PROCESSING_SCALE = 0.92; // Slightly reduced to signal "thinking"
+const SPEAKING_RHYTHM_AMPLITUDE = 0.06; // Gentle talk pulse (when no TTS level)
+
+export interface AnimatedCircleProps {
+	state: AgentState;
+	audioLevel?: number; // 0–1 normalized (mic for listening, TTS for speaking)
+	size?: number;
+	onClick?: () => void;
+	/** When true, shows a loader animation (e.g. "Voice agent is getting ready") */
+	isSpinning?: boolean;
 }
 
-export default function AnimatedCircle({ state, size = 200, onClick }: AnimatedCircleProps) {
-  const getCircleClasses = () => {
-    const baseClasses = 'rounded-full transition-all duration-500 ease-out relative overflow-hidden'
-    
-    switch (state) {
-      case 'idle':
-        return `${baseClasses} glass border-2 border-border`
-      case 'listening':
-        return `${baseClasses} border-2 border-accent-primary shadow-lg shadow-accent-primary/50 animate-pulse`
-      case 'processing':
-        return `${baseClasses} border-2 border-accent-tertiary shadow-lg shadow-accent-tertiary/50 animate-spin-slow`
-      case 'speaking':
-        return `${baseClasses} border-2 border-success shadow-lg shadow-success/50 animate-pulse-slow`
-      case 'connected':
-        return `${baseClasses} glass border-2 border-success/50`
-      case 'disconnected':
-        return `${baseClasses} glass border-2 border-error/50 opacity-50`
-      default:
-        return `${baseClasses} glass border-2 border-border`
-    }
-  }
+export default function AnimatedCircle({
+	state,
+	audioLevel = 0,
+	size = 200,
+	onClick,
+	isSpinning = false,
+}: AnimatedCircleProps) {
+	// Smooth audio level to prevent jitter — critical for organic feel
+	const audioSpring = useSpring(audioLevel, SPRING_RESPONSIVE);
+	useEffect(() => {
+		audioSpring.set(audioLevel);
+	}, [audioLevel, audioSpring]);
 
-  const getBackgroundGradient = () => {
-    switch (state) {
-      case 'listening':
-        return 'bg-gradient-to-br from-accent-primary/20 to-accent-secondary/20'
-      case 'processing':
-        return 'bg-gradient-to-br from-accent-tertiary/20 to-accent-primary/20'
-      case 'speaking':
-        return 'bg-gradient-to-br from-success/20 to-accent-secondary/20'
-      default:
-        return 'bg-surface'
-    }
-  }
+	// Normalize state for animation (connected → idle, disconnected → dimmed idle)
+	// When isSpinning, we treat as "getting ready" for visuals
+	const animState = useMemo(() => {
+		if (isSpinning) return "getting_ready";
+		if (state === "connected") return "idle";
+		if (state === "disconnected") return "disconnected";
+		return state;
+	}, [state, isSpinning]);
 
-  const getInnerCircleClasses = () => {
-    const baseClasses = 'rounded-full absolute transition-all duration-500'
-    
-    switch (state) {
-      case 'listening':
-        return `${baseClasses} bg-accent-primary/30 animate-ping`
-      case 'processing':
-        return `${baseClasses} bg-accent-tertiary/30 animate-spin-slow`
-      case 'speaking':
-        return `${baseClasses} bg-success/30 animate-pulse`
-      default:
-        return `${baseClasses} bg-transparent`
-    }
-  }
+	// Main scale: driven by state + audio. Single spring for smooth transitions.
+	// For speaking without TTS level, we use animate keyframes (handled in JSX).
+	const targetScale = useMemo(() => {
+		if (animState === "getting_ready") return 1;
+		if (animState === "idle" || animState === "disconnected") return 1;
+		if (animState === "listening") {
+			return 1 + LISTENING_SCALE_RESPONSE * audioLevel;
+		}
+		if (animState === "processing") return PROCESSING_SCALE;
+		if (animState === "speaking") {
+			// When TTS level available, drive scale; else pulse via animate in JSX
+			return audioLevel > 0
+				? 1 + SPEAKING_RHYTHM_AMPLITUDE * 3 * audioLevel
+				: 1;
+		}
+		return 1;
+	}, [animState, audioLevel]);
 
-  const getIcon = () => {
-    switch (state) {
-      case 'idle':
-        return (
-          <svg className="w-16 h-16 text-accent-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-          </svg>
-        )
-      case 'listening':
-        return (
-          <svg className="w-16 h-16 text-accent-primary animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10a4 4 0 11-8 0 4 4 0 018 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 10a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        )
-      case 'processing':
-        return (
-          <svg className="w-16 h-16 text-accent-tertiary animate-spin-slow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        )
-      case 'speaking':
-        return (
-          <svg className="w-16 h-16 text-success animate-pulse-slow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-          </svg>
-        )
-      case 'connected':
-        return (
-          <svg className="w-16 h-16 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        )
-      case 'disconnected':
-        return (
-          <svg className="w-16 h-16 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        )
-      default:
-        return (
-          <svg className="w-16 h-16 text-accent-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-          </svg>
-        )
-    }
-  }
+	const mainScale = useSpring(targetScale, SPRING_RESPONSIVE);
+	useEffect(() => {
+		mainScale.set(targetScale);
+	}, [targetScale, mainScale]);
 
-  return (
-    <div 
-      className={`relative flex items-center justify-center ${onClick ? 'cursor-pointer group' : ''}`}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onClick()
-        }
-      } : undefined}
-    >
-      <div
-        className={`${getCircleClasses()} ${onClick ? 'hover:scale-105 active:scale-95 hover:shadow-glow-strong' : ''}`}
-        style={{
-          width: `${size}px`,
-          height: `${size}px`,
-        }}
-      >
-        {/* Background gradient layer */}
-        <div className={`absolute inset-0 ${getBackgroundGradient()} rounded-full`} />
-        
-        {/* Inner circle for layered animation */}
-        {state !== 'idle' && state !== 'connected' && state !== 'disconnected' && (
-          <div 
-            className={getInnerCircleClasses()} 
-            style={{
-              width: `${size * 0.7}px`,
-              height: `${size * 0.7}px`,
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-            }}
-          />
-        )}
-        
-        {/* Icon */}
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          {getIcon()}
-        </div>
-      </div>
-      
-      {/* Ripple effects for listening and speaking */}
-      {(state === 'listening' || state === 'speaking') && (
-        <>
-          <div
-            className={`absolute rounded-full border-2 ${
-              state === 'listening' ? 'border-accent-primary/50' : 'border-success/50'
-            } animate-ping`}
-            style={{
-              width: `${size + 50}px`,
-              height: `${size + 50}px`,
-              animationDelay: '0.2s',
-            }}
-          />
-          <div
-            className={`absolute rounded-full border-2 ${
-              state === 'listening' ? 'border-accent-secondary/40' : 'border-accent-secondary/40'
-            } animate-ping`}
-            style={{
-              width: `${size + 100}px`,
-              height: `${size + 100}px`,
-              animationDelay: '0.4s',
-            }}
-          />
-          <div
-            className={`absolute rounded-full border ${
-              state === 'listening' ? 'border-accent-primary/30' : 'border-success/30'
-            } animate-ping`}
-            style={{
-              width: `${size + 150}px`,
-              height: `${size + 150}px`,
-              animationDelay: '0.6s',
-            }}
-          />
-        </>
-      )}
-    </div>
-  )
+	// Derived motion values — update automatically without re-renders
+	const ringScale = useTransform(audioSpring, [0, 1], [1, 1.08]);
+	const haloOpacity = useTransform(audioSpring, [0, 1], [0.4, 0.8]);
+
+	// Gradient stops per state — cool/warm progression
+	const gradientConfig = useMemo(
+		() => ({
+			idle: {
+				from: "rgba(100, 149, 237, 0.4)",
+				to: "rgba(147, 112, 219, 0.35)",
+				glow: "rgba(100, 149, 237, 0.15)",
+			},
+			getting_ready: {
+				from: "rgba(100, 149, 237, 0.35)",
+				to: "rgba(147, 112, 219, 0.3)",
+				glow: "rgba(100, 149, 237, 0.25)",
+			},
+			listening: {
+				from: "rgba(0, 217, 255, 0.5)",
+				to: "rgba(0, 255, 200, 0.4)",
+				glow: "rgba(0, 217, 255, 0.35)",
+			},
+			processing: {
+				from: "rgba(123, 97, 255, 0.45)",
+				to: "rgba(75, 0, 130, 0.4)",
+				glow: "rgba(123, 97, 255, 0.25)",
+			},
+			speaking: {
+				from: "rgba(0, 255, 200, 0.45)",
+				to: "rgba(34, 197, 94, 0.4)",
+				glow: "rgba(0, 255, 136, 0.3)",
+			},
+			disconnected: {
+				from: "rgba(100, 100, 120, 0.25)",
+				to: "rgba(80, 80, 100, 0.2)",
+				glow: "rgba(100, 100, 120, 0.08)",
+			},
+		}),
+		[]
+	);
+
+	const config = gradientConfig[animState] ?? gradientConfig.idle;
+
+	const isClickable = Boolean(onClick);
+	const isDisabled =
+		animState === "disconnected" || animState === "getting_ready";
+
+	return (
+		<motion.div
+			className="relative flex items-center justify-center select-none"
+			onClick={isClickable && !isDisabled ? onClick : undefined}
+			role={isClickable ? "button" : undefined}
+			tabIndex={isClickable ? 0 : undefined}
+			onKeyDown={
+				isClickable
+					? (e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								onClick?.();
+							}
+					  }
+					: undefined
+			}
+			style={{
+				cursor: isClickable && !isDisabled ? "pointer" : "default",
+			}}
+			whileHover={
+				isClickable && !isDisabled ? { scale: 1.02 } : undefined
+			}
+			whileTap={isClickable && !isDisabled ? { scale: 0.98 } : undefined}
+		>
+			{/* Getting ready: soft pulsing halo + loader ring */}
+			{animState === "getting_ready" && (
+				<>
+					<motion.div
+						className="absolute rounded-full pointer-events-none"
+						style={{
+							width: size + 80,
+							height: size + 80,
+							background: `radial-gradient(circle, ${config.glow} 0%, transparent 70%)`,
+						}}
+						animate={{
+							opacity: [0.3, 0.7, 0.3],
+							scale: [1, 1.12, 1],
+						}}
+						transition={{
+							duration: 1.8,
+							repeat: Infinity,
+							ease: "easeInOut",
+						}}
+					/>
+					{/* Spinning loader ring around the circle */}
+					<motion.div
+						className="absolute rounded-full border-4 border-transparent pointer-events-none"
+						style={{
+							width: size + 24,
+							height: size + 24,
+							left: "50%",
+							top: "50%",
+							marginLeft: -(size + 24) / 2,
+							marginTop: -(size + 24) / 2,
+							borderTopColor: "rgba(100, 149, 237, 0.9)",
+							borderRightColor: "rgba(147, 112, 219, 0.6)",
+							borderBottomColor: "rgba(100, 149, 237, 0.3)",
+							borderLeftColor: "rgba(147, 112, 219, 0.3)",
+						}}
+						animate={{ rotate: 360 }}
+						transition={{
+							duration: 1.2,
+							repeat: Infinity,
+							ease: "linear",
+						}}
+					/>
+				</>
+			)}
+
+			{/* Outer glow halo — expands with listening/speaking */}
+			{(animState === "listening" || animState === "speaking") && (
+				<motion.div
+					className="absolute rounded-full pointer-events-none"
+					style={{
+						width: size + 80,
+						height: size + 80,
+						background: `radial-gradient(circle, ${config.glow} 0%, transparent 70%)`,
+						opacity: haloOpacity,
+					}}
+					animate={{
+						scale: [1, 1.15, 1],
+					}}
+					transition={{
+						duration: 2,
+						repeat: Infinity,
+						ease: "easeInOut",
+					}}
+				/>
+			)}
+
+			{/* Listening: converging rings — energy being consumed / absorbed */}
+			{animState === "listening" && (
+				<>
+					{[0, 1, 2].map((i) => (
+						<motion.div
+							key={`listen-ring-${i}`}
+							className="absolute rounded-full border pointer-events-none origin-center"
+							style={{
+								width: size + 60 + i * 40,
+								height: size + 60 + i * 40,
+								left: "50%",
+								top: "50%",
+								marginLeft: -(size + 60 + i * 40) / 2,
+								marginTop: -(size + 60 + i * 40) / 2,
+								borderColor: "rgba(0, 217, 255, 0.4)",
+								opacity: 0,
+							}}
+							animate={{
+								scale: [1, 0.3],
+								opacity: [0.6, 0],
+							}}
+							transition={{
+								duration: 1.2,
+								repeat: Infinity,
+								ease: "easeOut",
+								delay: i * 0.35,
+							}}
+						/>
+					))}
+					{/* Inner vortex hint — radial streaks pulled toward center */}
+					<motion.div
+						className="absolute rounded-full pointer-events-none"
+						style={{
+							width: size + 40,
+							height: size + 40,
+							left: "50%",
+							top: "50%",
+							marginLeft: -(size + 40) / 2,
+							marginTop: -(size + 40) / 2,
+							background: `radial-gradient(circle at center, transparent 40%, rgba(0, 217, 255, 0.15) 70%, transparent 100%)`,
+						}}
+						animate={{
+							opacity: [0.4, 0.9, 0.4],
+							scale: [1, 1.05, 1],
+						}}
+						transition={{
+							duration: 0.8,
+							repeat: Infinity,
+							ease: "easeInOut",
+						}}
+					/>
+				</>
+			)}
+
+			{/* Speaking: sparkles — energetic burst outward */}
+			{animState === "speaking" && (
+				<>
+					{Array.from({ length: 12 }).map((_, i) => {
+						const angle = (i / 12) * Math.PI * 2 + Math.PI / 12;
+						const radius = size * 0.5;
+						const endX = Math.cos(angle) * radius * 0.7;
+						const endY = Math.sin(angle) * radius * 0.7;
+						return (
+							<motion.div
+								key={`sparkle-${i}`}
+								className="absolute w-1.5 h-1.5 rounded-full pointer-events-none"
+								style={{
+									left: "50%",
+									top: "50%",
+									background: "rgba(255, 255, 255, 0.95)",
+									boxShadow:
+										"0 0 6px rgba(0, 255, 136, 0.9), 0 0 12px rgba(34, 197, 94, 0.6)",
+								}}
+								animate={{
+									x: [0, endX * 0.5, endX],
+									y: [0, endY * 0.5, endY],
+									opacity: [0, 1, 0],
+									scale: [0.3, 1.3, 0.2],
+								}}
+								transition={{
+									duration: 1.4,
+									repeat: Infinity,
+									ease: "easeOut",
+									delay: i * 0.07,
+								}}
+							/>
+						);
+					})}
+					{/* Soft ember flicker overlay — warm inner glow */}
+					<motion.div
+						className="absolute rounded-full pointer-events-none"
+						style={{
+							width: size,
+							height: size,
+							left: "50%",
+							top: "50%",
+							marginLeft: -size / 2,
+							marginTop: -size / 2,
+							background: `radial-gradient(circle at 50% 50%, rgba(255, 255, 200, 0.1) 0%, transparent 55%)`,
+							boxShadow: "inset 0 0 40px rgba(0, 255, 136, 0.12)",
+						}}
+						animate={{
+							opacity: [0.6, 1, 0.6],
+						}}
+						transition={{
+							duration: 0.5,
+							repeat: Infinity,
+							ease: "easeInOut",
+						}}
+					/>
+				</>
+			)}
+
+			{/* Main circle — scale driven by state + audio */}
+			<motion.div
+				className="relative rounded-full overflow-hidden origin-center"
+				style={{
+					width: size,
+					height: size,
+					scale:
+						animState === "idle" ||
+						animState === "disconnected" ||
+						animState === "getting_ready" ||
+						(animState === "speaking" && audioLevel === 0)
+							? undefined
+							: mainScale,
+					opacity: animState === "disconnected" ? 0.6 : 1,
+				}}
+				animate={
+					animState === "getting_ready"
+						? { scale: [1, 1 + IDLE_SCALE_RANGE * 1.2, 1] }
+						: animState === "idle" || animState === "disconnected"
+						? {
+								scale: [1, 1 + IDLE_SCALE_RANGE, 1],
+						  }
+						: animState === "speaking" && audioLevel === 0
+						? {
+								scale: [
+									1,
+									1 + SPEAKING_RHYTHM_AMPLITUDE * 2,
+									1,
+								],
+						  }
+						: undefined
+				}
+				transition={
+					animState === "getting_ready"
+						? { duration: 2, repeat: Infinity, ease: "easeInOut" }
+						: animState === "idle" || animState === "disconnected"
+						? {
+								duration: 2.5,
+								repeat: Infinity,
+								ease: "easeInOut",
+						  }
+						: animState === "speaking" && audioLevel === 0
+						? {
+								duration: 1.2,
+								repeat: Infinity,
+								ease: "easeInOut",
+						  }
+						: undefined
+				}
+			>
+				{/* Base gradient background */}
+				<motion.div
+					className="absolute inset-0 rounded-full"
+					style={{
+						background: `radial-gradient(circle at 30% 30%, ${config.from}, ${config.to})`,
+						boxShadow: `inset 0 0 60px rgba(255,255,255,0.08)`,
+					}}
+					animate={
+						animState === "processing"
+							? {
+									background: [
+										`radial-gradient(circle at 30% 30%, ${config.from}, ${config.to})`,
+										`radial-gradient(circle at 70% 70%, ${config.to}, ${config.from})`,
+										`radial-gradient(circle at 30% 30%, ${config.from}, ${config.to})`,
+									],
+							  }
+							: undefined
+					}
+					transition={
+						animState === "processing"
+							? { duration: 4, repeat: Infinity, ease: "linear" }
+							: undefined
+					}
+				/>
+
+				{/* Rotating glow layer for processing — signals intelligence */}
+				{animState === "processing" && (
+					<motion.div
+						className="absolute inset-[-20%] rounded-full opacity-40 pointer-events-none"
+						style={{
+							background: `conic-gradient(from 0deg, transparent, ${config.glow}, transparent, ${config.glow}, transparent)`,
+						}}
+						animate={{ rotate: 360 }}
+						transition={{
+							duration: 8,
+							repeat: Infinity,
+							ease: "linear",
+						}}
+					/>
+				)}
+
+				{/* Inner core — subtle highlight */}
+				<div
+					className="absolute inset-[15%] rounded-full pointer-events-none"
+					style={{
+						background: `radial-gradient(circle, rgba(255,255,255,0.15), transparent)`,
+						backdropFilter: "blur(8px)",
+					}}
+				/>
+			</motion.div>
+
+			{/* Responsive ring — listening/speaking reacts to audio */}
+			{(animState === "listening" || animState === "speaking") && (
+				<motion.div
+					className="absolute rounded-full border-2 pointer-events-none origin-center"
+					style={{
+						width: size + 20,
+						height: size + 20,
+						left: "50%",
+						top: "50%",
+						marginLeft: -(size + 20) / 2,
+						marginTop: -(size + 20) / 2,
+						borderColor:
+							animState === "listening"
+								? "rgba(0, 217, 255, 0.5)"
+								: "rgba(0, 255, 136, 0.5)",
+						opacity: haloOpacity,
+						scale: ringScale,
+					}}
+				/>
+			)}
+		</motion.div>
+	);
 }
-
-
-

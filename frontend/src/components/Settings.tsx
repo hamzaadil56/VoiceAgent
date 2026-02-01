@@ -36,7 +36,9 @@ export default function Settings() {
 
 	const fetchSettings = async () => {
 		try {
-			const response = await fetch("http://localhost:8000/api/settings");
+			const response = await fetch(
+				`${import.meta.env.VITE_BACKEND_URL}/api/settings`
+			);
 			if (response.ok) {
 				const data = await response.json();
 				setSettings(data);
@@ -49,19 +51,6 @@ export default function Settings() {
 		} finally {
 			setLoading(false);
 		}
-	};
-
-	const fetchVoices = async () => {
-		try {
-			const response = await fetch("http://localhost:8000/api/voices");
-			if (response.ok) {
-				const data = await response.json();
-				return data.voices;
-			}
-		} catch (error) {
-			console.error("Error fetching voices:", error);
-		}
-		return AVAILABLE_VOICES;
 	};
 
 	const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -91,13 +80,16 @@ export default function Settings() {
 		}
 
 		try {
-			const response = await fetch("http://localhost:8000/api/settings", {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(updates),
-			});
+			const response = await fetch(
+				`${import.meta.env.VITE_BACKEND_URL}/api/settings`,
+				{
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(updates),
+				}
+			);
 
 			if (response.ok) {
 				const data = await response.json();
@@ -125,7 +117,9 @@ export default function Settings() {
 			<div className="glass-elevated rounded-3xl shadow-2xl p-10 text-center border border-border/50">
 				<div className="flex flex-col items-center gap-4">
 					<div className="w-12 h-12 border-4 border-accent-primary border-t-transparent rounded-full animate-spin-slow"></div>
-					<p className="text-text-secondary font-body">Loading settings...</p>
+					<p className="text-text-secondary font-body">
+						Loading settings...
+					</p>
 				</div>
 			</div>
 		);
@@ -134,7 +128,9 @@ export default function Settings() {
 	if (!settings) {
 		return (
 			<div className="glass-elevated rounded-3xl shadow-2xl p-10 text-center border border-border/50">
-				<p className="text-error font-body mb-6">Failed to load settings</p>
+				<p className="text-error font-body mb-6">
+					Failed to load settings
+				</p>
 				<button
 					onClick={fetchSettings}
 					className="px-6 py-3 bg-accent-primary text-bg-primary rounded-lg hover:bg-accent-secondary font-body font-semibold transition-all shadow-lg shadow-accent-primary/50 hover:shadow-accent-secondary/50"
@@ -147,7 +143,9 @@ export default function Settings() {
 
 	return (
 		<div className="glass-elevated rounded-3xl shadow-2xl p-10 border border-border/50">
-			<h2 className="text-3xl font-heading font-bold text-text-primary mb-8 tracking-tight">Settings</h2>
+			<h2 className="text-3xl font-heading font-bold text-text-primary mb-8 tracking-tight">
+				Settings
+			</h2>
 
 			{message && (
 				<div
@@ -214,11 +212,16 @@ export default function Settings() {
 						defaultValue={settings.temperature}
 						className="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer accent-accent-primary"
 						style={{
-							background: `linear-gradient(to right, var(--color-accent-primary) 0%, var(--color-accent-primary) ${(settings.temperature * 100)}%, var(--color-surface) ${(settings.temperature * 100)}%, var(--color-surface) 100%)`
+							background: `linear-gradient(to right, var(--color-accent-primary) 0%, var(--color-accent-primary) ${
+								settings.temperature * 100
+							}%, var(--color-surface) ${
+								settings.temperature * 100
+							}%, var(--color-surface) 100%)`,
 						}}
 					/>
 					<p className="text-text-tertiary text-xs font-body mt-2">
-						Controls randomness (0.0 = deterministic, 1.0 = creative)
+						Controls randomness (0.0 = deterministic, 1.0 =
+						creative)
 					</p>
 				</div>
 
@@ -263,12 +266,20 @@ export default function Settings() {
 					</h3>
 					<div className="space-y-2 font-body text-sm">
 						<div className="flex justify-between items-center py-2 border-b border-border/20">
-							<span className="text-text-tertiary uppercase text-xs tracking-wider">STT Model</span>
-							<span className="text-text-primary font-medium">{settings.stt_model}</span>
+							<span className="text-text-tertiary uppercase text-xs tracking-wider">
+								STT Model
+							</span>
+							<span className="text-text-primary font-medium">
+								{settings.stt_model}
+							</span>
 						</div>
 						<div className="flex justify-between items-center py-2">
-							<span className="text-text-tertiary uppercase text-xs tracking-wider">LLM Model</span>
-							<span className="text-text-primary font-medium">{settings.llm_model}</span>
+							<span className="text-text-tertiary uppercase text-xs tracking-wider">
+								LLM Model
+							</span>
+							<span className="text-text-primary font-medium">
+								{settings.llm_model}
+							</span>
 						</div>
 					</div>
 				</div>

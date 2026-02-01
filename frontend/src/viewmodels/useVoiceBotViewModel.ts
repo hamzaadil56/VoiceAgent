@@ -17,6 +17,7 @@ export function useVoiceBotViewModel() {
 			processingTime: null,
 			turnCount: 0,
 		});
+	const [audioLevel, setAudioLevel] = useState(0);
 
 	const viewModelRef = useRef<VoiceBotViewModel | null>(null);
 	const audioServiceRef = useRef<AudioServiceManager | null>(null);
@@ -28,9 +29,15 @@ export function useVoiceBotViewModel() {
 	const [error, setError] = useState<string | null>(null);
 	const [isConnected, setIsConnected] = useState(false);
 	const [processingTime, setProcessingTime] = useState<number | null>(null);
+	const [isSpinning, setIsSpinning] = useState(false);
 
 	// Single useEffect for initialization
 	useEffect(() => {
+		// Wake serverless TTS endpoint; show "Voice agent is getting ready" while pending
+		setIsSpinning(true);
+		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/spin`).finally(() =>
+			setIsSpinning(false)
+		);
 		// Create service managers
 		audioServiceRef.current = new AudioServiceManager();
 		wsServiceRef.current = new WebSocketServiceManager();
@@ -54,6 +61,9 @@ export function useVoiceBotViewModel() {
 				onStateChange: (state) => {
 					setViewModelState(state);
 				},
+				onVolumeChange: (vol) => {
+					setAudioLevel(vol);
+				},
 			}
 		);
 
@@ -69,7 +79,7 @@ export function useVoiceBotViewModel() {
 		const fetchSettings = async () => {
 			try {
 				const response = await fetch(
-					"http://localhost:8000/api/settings"
+					`${import.meta.env.VITE_BACKEND_URL}/api/settings`
 				);
 				if (response.ok) {
 					const data = await response.json();
@@ -146,6 +156,13 @@ export function useVoiceBotViewModel() {
 		};
 	}, []);
 
+	// Reset audio level when not recording
+	useEffect(() => {
+		if (!isRecording) {
+			setAudioLevel(0);
+		}
+	}, [isRecording]);
+
 	// Update ViewModel with state changes
 	useEffect(() => {
 		if (viewModelRef.current) {
@@ -189,11 +206,12 @@ export function useVoiceBotViewModel() {
 	}, []);
 
 	const getStateLabel = useCallback(() => {
+		if (isSpinning) return "Voice agent is getting ready";
 		if (viewModelRef.current) {
 			return viewModelRef.current.getStateLabel();
 		}
 		return "Unknown";
-	}, []);
+	}, [isSpinning]);
 
 	const canStartRecording = useCallback(() => {
 		if (viewModelRef.current) {
@@ -212,6 +230,8 @@ export function useVoiceBotViewModel() {
 	return {
 		// State
 		...viewModelState,
+		audioLevel: isRecording ? audioLevel : 0, // Only pass during listening
+		isSpinning,
 		// Methods
 		startRecording: startRecordingHandler,
 		stopRecording: stopRecordingHandler,

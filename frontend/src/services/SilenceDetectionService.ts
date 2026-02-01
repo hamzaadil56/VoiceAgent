@@ -156,7 +156,10 @@ export class SilenceDetectionService {
 			this.audioContext = null;
 		}
 
-		this.stream = null;
+		if (this.stream) {
+			this.stream.getTracks().forEach((t) => t.stop());
+			this.stream = null;
+		}
 	}
 }
 
