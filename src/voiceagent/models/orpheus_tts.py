@@ -111,7 +111,7 @@ class OrpheusTTSModel(TTSModel):
             async with httpx.AsyncClient() as client:
                 async with client.stream(
                     "POST",
-                    f"{self.base_url}/completions",
+                    f"{self.base_url}/v1/completions",
                     headers=headers,
                     json={
                         "model": "local-model",

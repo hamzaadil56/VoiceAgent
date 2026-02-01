@@ -20,7 +20,8 @@ class BackendSettings(BaseSettings):
     reload: bool = False
 
     # CORS Configuration
-    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000", "http://localhost:5174"]
+    cors_origins: list[str] = ["http://localhost:5173",
+                               "http://localhost:3000", "http://localhost:5174"]
 
     # WebSocket Configuration
     ws_max_connections: int = 100
@@ -31,5 +32,5 @@ class BackendSettings(BaseSettings):
     audio_channels: int = 1
     audio_chunk_size: int = 4096
 
-
-
+    # TTS spin endpoint auth (Bearer token)
+    tts_api_key: str = ""

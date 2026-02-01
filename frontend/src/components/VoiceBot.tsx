@@ -9,6 +9,7 @@ export default function VoiceBot() {
 		isPlaying,
 		audioLevel,
 		isConnected,
+		isSpinning,
 		error,
 		processingTime,
 		turnCount,
@@ -34,8 +35,11 @@ export default function VoiceBot() {
 					state={effectiveState}
 					audioLevel={audioLevel ?? 0}
 					size={220}
+					isSpinning={isSpinning}
 					onClick={
-						turnCount >= getMaxTurns()
+						isSpinning
+							? undefined // Disable while server is warming up
+							: turnCount >= getMaxTurns()
 							? undefined // Disable click when max turns reached
 							: isRecording
 							? handleStopRecording
@@ -76,7 +80,8 @@ export default function VoiceBot() {
 				{turnCount >= getMaxTurns() && (
 					<div className="mt-4 px-5 py-3 glass rounded-xl border border-warning/40 bg-warning/5">
 						<p className="text-warning text-sm font-body font-semibold text-center">
-							Turn limit reached ({getMaxTurns()} turns). Refresh to continue.
+							Turn limit reached ({getMaxTurns()} turns). Refresh
+							to continue.
 						</p>
 					</div>
 				)}
@@ -161,7 +166,9 @@ export default function VoiceBot() {
 								<span className="font-body font-semibold text-xs uppercase tracking-wider mb-1 block opacity-70">
 									{msg.role === "user" ? "You" : "Agent"}
 								</span>
-								<p className="font-body text-sm leading-relaxed">{msg.text}</p>
+								<p className="font-body text-sm leading-relaxed">
+									{msg.text}
+								</p>
 							</div>
 						))}
 					</div>
@@ -173,8 +180,8 @@ export default function VoiceBot() {
 				<div className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full">
 					<span
 						className={`inline-block w-2.5 h-2.5 rounded-full ${
-							isConnected 
-								? "bg-success shadow-lg shadow-success/50 animate-pulse" 
+							isConnected
+								? "bg-success shadow-lg shadow-success/50 animate-pulse"
 								: "bg-error shadow-lg shadow-error/50"
 						}`}
 					/>

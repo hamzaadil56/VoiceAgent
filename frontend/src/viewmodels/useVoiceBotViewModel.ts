@@ -29,9 +29,15 @@ export function useVoiceBotViewModel() {
 	const [error, setError] = useState<string | null>(null);
 	const [isConnected, setIsConnected] = useState(false);
 	const [processingTime, setProcessingTime] = useState<number | null>(null);
+	const [isSpinning, setIsSpinning] = useState(false);
 
 	// Single useEffect for initialization
 	useEffect(() => {
+		// Wake serverless TTS endpoint; show "Voice agent is getting ready" while pending
+		setIsSpinning(true);
+		fetch("http://localhost:8000/api/spin").finally(() =>
+			setIsSpinning(false)
+		);
 		// Create service managers
 		audioServiceRef.current = new AudioServiceManager();
 		wsServiceRef.current = new WebSocketServiceManager();
@@ -200,11 +206,12 @@ export function useVoiceBotViewModel() {
 	}, []);
 
 	const getStateLabel = useCallback(() => {
+		if (isSpinning) return "Voice agent is getting ready";
 		if (viewModelRef.current) {
 			return viewModelRef.current.getStateLabel();
 		}
 		return "Unknown";
-	}, []);
+	}, [isSpinning]);
 
 	const canStartRecording = useCallback(() => {
 		if (viewModelRef.current) {
@@ -224,6 +231,7 @@ export function useVoiceBotViewModel() {
 		// State
 		...viewModelState,
 		audioLevel: isRecording ? audioLevel : 0, // Only pass during listening
+		isSpinning,
 		// Methods
 		startRecording: startRecordingHandler,
 		stopRecording: stopRecordingHandler,

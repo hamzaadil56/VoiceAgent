@@ -26,6 +26,8 @@ export interface AnimatedCircleProps {
 	audioLevel?: number; // 0–1 normalized (mic for listening, TTS for speaking)
 	size?: number;
 	onClick?: () => void;
+	/** When true, shows a loader animation (e.g. "Voice agent is getting ready") */
+	isSpinning?: boolean;
 }
 
 export default function AnimatedCircle({
@@ -33,6 +35,7 @@ export default function AnimatedCircle({
 	audioLevel = 0,
 	size = 200,
 	onClick,
+	isSpinning = false,
 }: AnimatedCircleProps) {
 	// Smooth audio level to prevent jitter — critical for organic feel
 	const audioSpring = useSpring(audioLevel, SPRING_RESPONSIVE);
@@ -41,15 +44,18 @@ export default function AnimatedCircle({
 	}, [audioLevel, audioSpring]);
 
 	// Normalize state for animation (connected → idle, disconnected → dimmed idle)
+	// When isSpinning, we treat as "getting ready" for visuals
 	const animState = useMemo(() => {
+		if (isSpinning) return "getting_ready";
 		if (state === "connected") return "idle";
 		if (state === "disconnected") return "disconnected";
 		return state;
-	}, [state]);
+	}, [state, isSpinning]);
 
 	// Main scale: driven by state + audio. Single spring for smooth transitions.
 	// For speaking without TTS level, we use animate keyframes (handled in JSX).
 	const targetScale = useMemo(() => {
+		if (animState === "getting_ready") return 1;
 		if (animState === "idle" || animState === "disconnected") return 1;
 		if (animState === "listening") {
 			return 1 + LISTENING_SCALE_RESPONSE * audioLevel;
@@ -81,6 +87,11 @@ export default function AnimatedCircle({
 				to: "rgba(147, 112, 219, 0.35)",
 				glow: "rgba(100, 149, 237, 0.15)",
 			},
+			getting_ready: {
+				from: "rgba(100, 149, 237, 0.35)",
+				to: "rgba(147, 112, 219, 0.3)",
+				glow: "rgba(100, 149, 237, 0.25)",
+			},
 			listening: {
 				from: "rgba(0, 217, 255, 0.5)",
 				to: "rgba(0, 255, 200, 0.4)",
@@ -108,7 +119,8 @@ export default function AnimatedCircle({
 	const config = gradientConfig[animState] ?? gradientConfig.idle;
 
 	const isClickable = Boolean(onClick);
-	const isDisabled = animState === "disconnected";
+	const isDisabled =
+		animState === "disconnected" || animState === "getting_ready";
 
 	return (
 		<motion.div
@@ -134,6 +146,51 @@ export default function AnimatedCircle({
 			}
 			whileTap={isClickable && !isDisabled ? { scale: 0.98 } : undefined}
 		>
+			{/* Getting ready: soft pulsing halo + loader ring */}
+			{animState === "getting_ready" && (
+				<>
+					<motion.div
+						className="absolute rounded-full pointer-events-none"
+						style={{
+							width: size + 80,
+							height: size + 80,
+							background: `radial-gradient(circle, ${config.glow} 0%, transparent 70%)`,
+						}}
+						animate={{
+							opacity: [0.3, 0.7, 0.3],
+							scale: [1, 1.12, 1],
+						}}
+						transition={{
+							duration: 1.8,
+							repeat: Infinity,
+							ease: "easeInOut",
+						}}
+					/>
+					{/* Spinning loader ring around the circle */}
+					<motion.div
+						className="absolute rounded-full border-4 border-transparent pointer-events-none"
+						style={{
+							width: size + 24,
+							height: size + 24,
+							left: "50%",
+							top: "50%",
+							marginLeft: -(size + 24) / 2,
+							marginTop: -(size + 24) / 2,
+							borderTopColor: "rgba(100, 149, 237, 0.9)",
+							borderRightColor: "rgba(147, 112, 219, 0.6)",
+							borderBottomColor: "rgba(100, 149, 237, 0.3)",
+							borderLeftColor: "rgba(147, 112, 219, 0.3)",
+						}}
+						animate={{ rotate: 360 }}
+						transition={{
+							duration: 1.2,
+							repeat: Infinity,
+							ease: "linear",
+						}}
+					/>
+				</>
+			)}
+
 			{/* Outer glow halo — expands with listening/speaking */}
 			{(animState === "listening" || animState === "speaking") && (
 				<motion.div
@@ -277,13 +334,16 @@ export default function AnimatedCircle({
 					scale:
 						animState === "idle" ||
 						animState === "disconnected" ||
+						animState === "getting_ready" ||
 						(animState === "speaking" && audioLevel === 0)
 							? undefined
 							: mainScale,
 					opacity: animState === "disconnected" ? 0.6 : 1,
 				}}
 				animate={
-					animState === "idle" || animState === "disconnected"
+					animState === "getting_ready"
+						? { scale: [1, 1 + IDLE_SCALE_RANGE * 1.2, 1] }
+						: animState === "idle" || animState === "disconnected"
 						? {
 								scale: [1, 1 + IDLE_SCALE_RANGE, 1],
 						  }
@@ -298,7 +358,9 @@ export default function AnimatedCircle({
 						: undefined
 				}
 				transition={
-					animState === "idle" || animState === "disconnected"
+					animState === "getting_ready"
+						? { duration: 2, repeat: Infinity, ease: "easeInOut" }
+						: animState === "idle" || animState === "disconnected"
 						? {
 								duration: 2.5,
 								repeat: Infinity,
