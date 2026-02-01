@@ -35,7 +35,7 @@ export function useVoiceBotViewModel() {
 	useEffect(() => {
 		// Wake serverless TTS endpoint; show "Voice agent is getting ready" while pending
 		setIsSpinning(true);
-		fetch("http://localhost:8000/api/spin").finally(() =>
+		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/spin`).finally(() =>
 			setIsSpinning(false)
 		);
 		// Create service managers
@@ -79,7 +79,7 @@ export function useVoiceBotViewModel() {
 		const fetchSettings = async () => {
 			try {
 				const response = await fetch(
-					"http://localhost:8000/api/settings"
+					`${import.meta.env.VITE_BACKEND_URL}/api/settings`
 				);
 				if (response.ok) {
 					const data = await response.json();
