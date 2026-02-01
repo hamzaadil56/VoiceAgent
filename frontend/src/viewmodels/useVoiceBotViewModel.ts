@@ -17,6 +17,7 @@ export function useVoiceBotViewModel() {
 			processingTime: null,
 			turnCount: 0,
 		});
+	const [audioLevel, setAudioLevel] = useState(0);
 
 	const viewModelRef = useRef<VoiceBotViewModel | null>(null);
 	const audioServiceRef = useRef<AudioServiceManager | null>(null);
@@ -53,6 +54,9 @@ export function useVoiceBotViewModel() {
 			{
 				onStateChange: (state) => {
 					setViewModelState(state);
+				},
+				onVolumeChange: (vol) => {
+					setAudioLevel(vol);
 				},
 			}
 		);
@@ -146,6 +150,13 @@ export function useVoiceBotViewModel() {
 		};
 	}, []);
 
+	// Reset audio level when not recording
+	useEffect(() => {
+		if (!isRecording) {
+			setAudioLevel(0);
+		}
+	}, [isRecording]);
+
 	// Update ViewModel with state changes
 	useEffect(() => {
 		if (viewModelRef.current) {
@@ -212,6 +223,7 @@ export function useVoiceBotViewModel() {
 	return {
 		// State
 		...viewModelState,
+		audioLevel: isRecording ? audioLevel : 0, // Only pass during listening
 		// Methods
 		startRecording: startRecordingHandler,
 		stopRecording: stopRecordingHandler,

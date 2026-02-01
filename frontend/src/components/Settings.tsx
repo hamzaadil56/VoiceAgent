@@ -51,19 +51,6 @@ export default function Settings() {
 		}
 	};
 
-	const fetchVoices = async () => {
-		try {
-			const response = await fetch("http://localhost:8000/api/voices");
-			if (response.ok) {
-				const data = await response.json();
-				return data.voices;
-			}
-		} catch (error) {
-			console.error("Error fetching voices:", error);
-		}
-		return AVAILABLE_VOICES;
-	};
-
 	const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setSaving(true);

@@ -7,6 +7,7 @@ export default function VoiceBot() {
 		effectiveState,
 		isRecording,
 		isPlaying,
+		audioLevel,
 		isConnected,
 		error,
 		processingTime,
@@ -31,6 +32,7 @@ export default function VoiceBot() {
 			<div className="flex flex-col items-center mb-10">
 				<AnimatedCircle
 					state={effectiveState}
+					audioLevel={audioLevel ?? 0}
 					size={220}
 					onClick={
 						turnCount >= getMaxTurns()

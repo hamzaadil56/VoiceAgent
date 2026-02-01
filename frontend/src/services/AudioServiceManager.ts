@@ -7,6 +7,7 @@ import {
 
 export interface AudioServiceCallbacks {
 	onSilenceDetected?: () => void;
+	onVolumeChange?: (volume: number) => void; // 0–1 normalized mic amplitude
 }
 
 export class AudioServiceManager {
@@ -39,6 +40,9 @@ export class AudioServiceManager {
 					{
 						onSilenceDetected: () => {
 							this.callbacks.onSilenceDetected?.();
+						},
+						onVolumeChange: (vol) => {
+							this.callbacks.onVolumeChange?.(vol);
 						},
 					}
 				);
@@ -148,6 +152,7 @@ export class AudioServiceManager {
 		if (this.silenceDetection) {
 			this.silenceDetection.updateCallbacks({
 				onSilenceDetected: callbacks.onSilenceDetected,
+				onVolumeChange: callbacks.onVolumeChange,
 			});
 		}
 	}
