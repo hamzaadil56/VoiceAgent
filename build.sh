@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Backend build script for cloud deployment.
+# Backend build for cloud deployment.
+# Run from the main (repo root) folder: ./build.sh
 # Installs all dependencies required to run the Voice Agent API.
-# Run from the backend directory: ./build.sh
-# Or from repo root: backend/build.sh
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_DIR="$SCRIPT_DIR"
-REPO_ROOT="$(cd "$BACKEND_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$REPO_ROOT/backend"
+
+cd "$REPO_ROOT"
 
 echo "╔═══════════════════════════════════════════════════════╗"
 echo "║           Voice Agent Backend — Build                 ║"
 echo "╚═══════════════════════════════════════════════════════╝"
 echo ""
-echo "Backend:  $BACKEND_DIR"
 echo "Repo root: $REPO_ROOT"
+echo "Backend:   $BACKEND_DIR"
 echo ""
 
 # Prefer uv if available, otherwise pip
@@ -50,7 +50,6 @@ echo ""
 
 # 3) Verify the app can be loaded
 echo "🔍 Verifying application import..."
-cd "$REPO_ROOT"
 if python3 -c "
 from backend.main import app
 print('App loaded:', getattr(app, 'title', 'Voice Agent API'))
