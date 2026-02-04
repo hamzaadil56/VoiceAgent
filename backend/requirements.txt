@@ -1,3 +1,4 @@
+# Reference only. Install using: cd backend && uv sync (see backend/pyproject.toml)
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 websockets>=12.0
