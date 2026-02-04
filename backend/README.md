@@ -99,10 +99,12 @@ uv run python main.py
 
 ### Deploying to Vercel
 
+Vercel's build environment is PEP 668 "externally managed", so use **pip + requirements.txt** (uv is not used on Vercel).
+
 1. **Root Directory:** `backend`
 2. **Framework Preset:** FastAPI
-3. **Install Command:** `pip install uv && uv sync` (installs uv, then installs deps from pyproject.toml)
-4. **Build Command:** `python -c "from main import app; print('App loaded:', getattr(app, 'title', 'Voice Agent API'))"` (verifies app loads)
+3. **Install Command:** `pip install -r requirements.txt --break-system-packages`
+4. **Build Command:** `python -c "from main import app; print('App loaded:', getattr(app, 'title', 'Voice Agent API'))"`
 5. **Output Directory:** leave empty / N/A
 
 The repo includes `backend/vercel.json` with these values. Vercel uses `backend/index.py` as the FastAPI entrypoint. Import the full repository (not only the `backend` folder) so that `main.py` can resolve the `backend` package from the repo root.

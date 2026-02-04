@@ -1,5 +1,5 @@
 {
-	"installCommand": "pip install uv && uv sync",
+	"installCommand": "pip install -r requirements.txt --break-system-packages",
 	"buildCommand": "python -c \"from main import app; print('App loaded:', getattr(app, 'title', 'Voice Agent API'))\"",
 	"framework": null,
 	"outputDirectory": null
