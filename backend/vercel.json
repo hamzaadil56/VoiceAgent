@@ -1,0 +1,6 @@
+{
+	"buildCommand": "bash build.sh",
+	"installCommand": "pip install -r requirements.txt",
+	"framework": null,
+	"outputDirectory": null
+}

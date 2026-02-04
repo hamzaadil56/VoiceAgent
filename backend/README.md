@@ -96,3 +96,13 @@ uv run python main.py
 ```
 
 **Deployment layout:** The voice agent library is source-only at `backend/src/voiceagent/` and uses the backend venv for all packages. There is a single `backend/pyproject.toml` and uv is the only package manager for the backend. Deploy with the full repo; run `uv sync` only in `backend/`.
+
+### Deploying to Vercel
+
+1. **Root Directory:** `backend`
+2. **Framework Preset:** FastAPI
+3. **Install Command:** `pip install uv && uv sync` (installs uv, then installs deps from pyproject.toml)
+4. **Build Command:** `python -c "from main import app; print('App loaded:', getattr(app, 'title', 'Voice Agent API'))"` (verifies app loads)
+5. **Output Directory:** leave empty / N/A
+
+The repo includes `backend/vercel.json` with these values. Vercel uses `backend/index.py` as the FastAPI entrypoint. Import the full repository (not only the `backend` folder) so that `main.py` can resolve the `backend` package from the repo root.
