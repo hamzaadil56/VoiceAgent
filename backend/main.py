@@ -1,23 +1,24 @@
 """FastAPI main application for Voice Agent web interface."""
 
-import uvicorn
-from contextlib import asynccontextmanager
-from rich.console import Console
-from backend.services.voice_service import VoiceService
-from backend.routes.websocket import websocket_endpoint
-from backend.routes import api
-from backend.config import BackendSettings
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, WebSocket
 import sys
 from pathlib import Path
 
-# Add parent directory to path to import voiceagent
-# CRITICAL: This MUST be before any backend imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add backend/src so "voiceagent" resolves (voiceagent lives in backend/src/voiceagent/)
+_backend_dir = Path(__file__).resolve().parent
+sys.path.insert(0, str(_backend_dir / "src"))
+# Add repo root so "backend" package resolves
+sys.path.insert(0, str(_backend_dir.parent))
 
-# Now import everything else
+from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from backend.config import BackendSettings
+from backend.routes import api
+from backend.routes.websocket import websocket_endpoint
+from backend.services.voice_service import VoiceService
+from rich.console import Console
+from contextlib import asynccontextmanager
+import uvicorn
 
 
 console = Console()
