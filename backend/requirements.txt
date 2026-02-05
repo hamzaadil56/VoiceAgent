@@ -1,5 +1,7 @@
 # Backend + voiceagent runtime. For local dev use: uv sync (see pyproject.toml)
 # Used by Vercel/pip when uv is not available (e.g. Install Command: pip install -r requirements.txt)
+# Use CPU-only PyTorch on Vercel to avoid CUDA/nvidia packages and reduce build memory
+--extra-index-url https://download.pytorch.org/whl/cpu
 
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
