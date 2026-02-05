@@ -102,9 +102,9 @@ uv run python main.py
 Vercel's build environment is PEP 668 "externally managed", so use **pip + requirements.txt** (uv is not used on Vercel).
 
 1. **Root Directory:** `backend`
-2. **Framework Preset:** FastAPI
+2. **Framework Preset:** FastAPI (required so all routes go to the FastAPI app; do not set Output Directory)
 3. **Install Command:** `pip install -r requirements.txt --break-system-packages`
 4. **Build Command:** `python -c "from main import app; print('App loaded:', getattr(app, 'title', 'Voice Agent API'))"`
-5. **Output Directory:** leave empty / N/A
+5. **Output Directory:** leave empty / unset. For backend-only FastAPI, Vercel must not use a static output directory or every request will 404.
 
-The repo includes `backend/vercel.json` with these values. Vercel uses `backend/index.py` as the FastAPI entrypoint. Import the full repository (not only the `backend` folder) so that `main.py` can resolve the `backend` package from the repo root.
+The repo includes `backend/vercel.json` with `"framework": "fastapi"` and no `outputDirectory`, so the FastAPI app receives all requests. Entrypoint is `index.py` (or `app` from `pyproject.toml` [project.scripts]). Import the full repository so that `main.py` can resolve the `backend` package from the repo root. In the Vercel dashboard, ensure **Output Directory** is blank for this project.
