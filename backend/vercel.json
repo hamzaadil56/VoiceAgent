@@ -1,0 +1,6 @@
+{
+	"installCommand": "pip install -r requirements.txt --break-system-packages",
+	"buildCommand": "mkdir -p public && echo '.' > public/.keep && python -c \"from main import app; print('App loaded:', getattr(app, 'title', 'Voice Agent API'))\"",
+	"framework": null,
+	"outputDirectory": "public"
+}

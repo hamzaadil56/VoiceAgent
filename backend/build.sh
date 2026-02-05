@@ -1,34 +1,29 @@
 #!/usr/bin/env bash
-# Backend build for deployment. Run from repo root as ./build.sh or from backend as ./build.sh
-# Installs all dependencies into backend/.venv using uv.
+# Backend build for deployment. Run with: bash build.sh (or ./build.sh if executable)
+# Installs deps with uv if available, else pip install -r requirements.txt (e.g. on Vercel).
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_DIR="$SCRIPT_DIR"
-cd "$BACKEND_DIR"
+cd "$SCRIPT_DIR"
 
-echo "Voice Agent Backend — Build (uv)"
-echo "Backend dir: $BACKEND_DIR"
+echo "Voice Agent Backend — Build"
 echo ""
 
-if ! command -v uv &> /dev/null; then
-    echo "uv is required. Install: curl -LsSf https://astral.sh/uv/install.sh | sh"
-    exit 1
+if command -v uv &> /dev/null; then
+    echo "Using uv: $(uv --version)"
+    uv sync
+else
+    echo "Using pip (uv not found)"
+    pip install -r requirements.txt
 fi
-echo "Using uv: $(uv --version)"
-echo ""
-
-echo "Installing dependencies (uv sync)..."
-uv sync
 echo ""
 
 echo "Verifying application import..."
-if uv run python -c "from main import app; print('App loaded:', getattr(app, 'title', 'Voice Agent API'))" 2>/dev/null; then
+if python -c "from main import app; print('App loaded:', getattr(app, 'title', 'Voice Agent API'))" 2>/dev/null; then
     echo "Build complete — app loads successfully"
 else
     echo "Build finished but app import check failed (missing .env or runtime deps?)"
     exit 1
 fi
 echo ""
-echo "Run from backend dir: uv run uvicorn main:app --host 0.0.0.0 --port 8000"

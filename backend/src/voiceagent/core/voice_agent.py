@@ -20,9 +20,14 @@ from agents.voice import (
 from agents import Agent, set_tracing_disabled, Runner
 import warnings
 import numpy as np
-import sounddevice as sd
 from typing import Optional
 from rich.console import Console
+
+try:
+    import sounddevice as sd
+except OSError:
+    # PortAudio not available (e.g. Vercel serverless, no audio device)
+    sd = None
 
 # Suppress Pydantic warnings from LiteLLM
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
@@ -130,7 +135,7 @@ class VoiceAgent:
 
         # Stream and optionally play the response
         player = None
-        if play_response:
+        if play_response and sd is not None:
             player = sd.OutputStream(
                 samplerate=24000, channels=1, dtype=np.int16
             )
@@ -168,6 +173,11 @@ class VoiceAgent:
         Returns:
             Audio data as numpy array
         """
+        if sd is None:
+            raise RuntimeError(
+                "PortAudio/sounddevice not available (e.g. serverless). "
+                "Recording requires a local audio device."
+            )
         console.print(
             f"[bold green]🎤 Recording for {duration} seconds...[/bold green]")
 
@@ -312,32 +322,35 @@ class VoiceAgent:
             # Combine chunks
             audio_data = b"".join(audio_chunks)
 
-            # Play audio using sounddevice
+            # Play audio using sounddevice (when available)
             # TTS models output WAV format, so read it with soundfile
-            try:
-                audio_io = io.BytesIO(audio_data)
+            if sd is not None:
+                try:
+                    audio_io = io.BytesIO(audio_data)
 
-                # Read WAV file from bytes
-                audio_array, sample_rate = sf.read(audio_io, dtype="float32")
+                    # Read WAV file from bytes
+                    audio_array, sample_rate = sf.read(audio_io, dtype="float32")
 
-                # Convert to mono if stereo
-                if len(audio_array.shape) > 1:
-                    audio_array = audio_array[:, 0]
+                    # Convert to mono if stereo
+                    if len(audio_array.shape) > 1:
+                        audio_array = audio_array[:, 0]
 
-                # Normalize audio (optional, but helps with playback)
-                max_val = abs(audio_array).max() if len(
-                    audio_array) > 0 else 1.0
-                if max_val > 0:
-                    audio_array = audio_array / max_val
+                    # Normalize audio (optional, but helps with playback)
+                    max_val = abs(audio_array).max() if len(
+                        audio_array) > 0 else 1.0
+                    if max_val > 0:
+                        audio_array = audio_array / max_val
 
-                # Play audio
-                console.print("[dim]🔊 Playing response...[/dim]")
-                sd.play(audio_array, samplerate=sample_rate)
-                sd.wait()
+                    # Play audio
+                    console.print("[dim]🔊 Playing response...[/dim]")
+                    sd.play(audio_array, samplerate=sample_rate)
+                    sd.wait()
 
-            except Exception as e:
-                console.print(
-                    f"[yellow]⚠ Could not play audio: {str(e)}[/yellow]")
+                except Exception as e:
+                    console.print(
+                        f"[yellow]⚠ Could not play audio: {str(e)}[/yellow]")
+            else:
+                console.print("[dim]🔊 Playback skipped (no audio device)[/dim]")
 
         except Exception as e:
             console.print(f"[yellow]⚠ TTS Error: {str(e)}[/yellow]")
