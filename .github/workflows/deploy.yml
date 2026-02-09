@@ -1,0 +1,23 @@
+name: Deploy to DigitalOcean
+
+on:
+    push:
+        branches: ["main"] # Triggers when you push to the main branch
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: SSH and Deploy
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USER }}
+                  key: ${{ secrets.SSH_PRIVATE_KEY }}
+                  script: |
+                      cd ~/voiceagent
+                      docker compose pull
+                      docker compose up -d
