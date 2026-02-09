@@ -1,42 +1,42 @@
 name: Build and Deploy Backend
 
 on:
-  push:
-    branches: [ "main" ]
-    paths:
-      - 'backend/**'
+    push:
+        branches: ["main"]
+        paths:
+            - "backend/**" # Only runs when the backend code changes
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    build-and-push:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+            - name: Login to Docker Hub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKERHUB_USERNAME }}
+                  password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          tags: hamzaadil/voiceagent-backend:latest # We use 'latest' for automation
+            - name: Build and push
+              uses: docker/build-push-action@v5
+              with:
+                  context: ./backend # Tells GitHub the Dockerfile is inside the backend folder
+                  push: true
+                  tags: ${{ secrets.DOCKERHUB_USERNAME }}/voiceagent-backend:latest
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: SSH and Deploy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd ~/voiceagent
-            docker compose pull
-            docker compose up -d
+    deploy:
+        needs: build-and-push
+        runs-on: ubuntu-latest
+        steps:
+            - name: SSH and Deploy
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USER }}
+                  key: ${{ secrets.SSH_PRIVATE_KEY }}
+                  script: |
+                      cd ~/voiceagent
+                      docker compose pull
+                      docker compose up -d
