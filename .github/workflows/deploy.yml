@@ -2,7 +2,9 @@ name: Deploy to DigitalOcean
 
 on:
     push:
-        branches: ["main"] # Triggers when you push to the main branch
+        branches: ["main"]
+        paths:
+            - "backend/**" # Triggers when you push to the main branch
 
 jobs:
     deploy:
