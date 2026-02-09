@@ -14,7 +14,7 @@ RUN adduser --disabled-password --gecos "" appuser
 WORKDIR /app
 
 # Copy backend into /app/backend so "backend" package resolves with PYTHONPATH=/app
-COPY backend /app/backend
+COPY . /app/backend
 
 ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1
