@@ -1,17 +1,19 @@
 """Voice service wrapper for WebSocket integration."""
 
-import numpy as np
 import io
+import os
+import subprocess
+import tempfile
 import wave
 import base64
 from typing import AsyncIterator, Optional
-from voiceagent import VoiceAgent, Settings
-from rich.console import Console
-import subprocess
-import tempfile
-import os
 
-console = Console()
+import numpy as np
+from voiceagent import VoiceAgent, Settings
+
+from backend.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class VoiceService:
@@ -32,9 +34,9 @@ class VoiceService:
         """Initialize the VoiceAgent instance."""
         try:
             self.agent = VoiceAgent(self.settings)
-            console.print("[green]✓ VoiceService initialized[/green]")
+            logger.info("VoiceService initialized")
         except Exception as e:
-            console.print(f"[red]✗ Failed to initialize VoiceAgent: {e}[/red]")
+            logger.exception("Failed to initialize VoiceAgent: %s", e)
             raise
 
     def update_settings(self, **kwargs):
@@ -62,8 +64,7 @@ class VoiceService:
             subprocess.run(['ffmpeg', '-version'],
                            capture_output=True, check=True)
         except (subprocess.CalledProcessError, FileNotFoundError):
-            console.print(
-                "[yellow]Warning: ffmpeg not found. WebM conversion may fail.[/yellow]")
+            logger.warning("ffmpeg not found. WebM conversion may fail.")
             raise RuntimeError("ffmpeg not available for WebM conversion")
 
         try:
@@ -99,8 +100,7 @@ class VoiceService:
 
             return wav_data
         except Exception as e:
-            console.print(
-                f"[yellow]Warning: Could not convert WebM to WAV: {e}[/yellow]")
+            logger.warning("Could not convert WebM to WAV: %s", e)
             raise
 
     async def process_audio_chunk(
@@ -130,8 +130,7 @@ class VoiceService:
                 audio_bytes = wav_file.readframes(wav_file.getnframes())
                 audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
         except Exception as e1:
-            console.print(
-                f"[dim]Not WAV format, trying WebM conversion: {e1}[/dim]")
+            logger.debug("Not WAV format, trying WebM conversion: %s", e1)
             # If not WAV, try to convert WebM to WAV
             try:
                 wav_data = self._convert_webm_to_wav(audio_data)
@@ -141,10 +140,7 @@ class VoiceService:
                     audio_bytes = wav_file.readframes(wav_file.getnframes())
                     audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
             except Exception as e2:
-                console.print(
-                    f"[yellow]Warning: Could not process audio format: {e2}[/yellow]")
-                console.print(
-                    "[yellow]Trying to process as raw PCM (may not work correctly)...[/yellow]")
+                logger.warning("Could not process audio format: %s. Trying raw PCM.", e2)
                 # Last resort: assume raw PCM at 24kHz
                 audio_array = np.frombuffer(audio_data, dtype=np.int16)
                 sample_rate = 24000
@@ -175,32 +171,23 @@ class VoiceService:
                 if isinstance(audio_response, np.ndarray):
                     # Convert numpy array directly to PCM bytes
                     pcm_data = audio_response.tobytes()
-                    console.print(
-                        f"[dim]Converted numpy array to PCM: {len(pcm_data)} bytes[/dim]"
-                    )
+                    logger.debug("Converted numpy array to PCM: %s bytes", len(pcm_data))
                 elif isinstance(audio_response, bytes):
                     # If it's WAV bytes, extract PCM from WAV
                     pcm_data = self._extract_pcm_from_wav(audio_response)
                     if not pcm_data:
-                        console.print(
-                            "[red]Failed to extract PCM from WAV[/red]")
+                        logger.error("Failed to extract PCM from WAV")
                         return
-                    console.print(
-                        f"[dim]Extracted PCM from WAV: {len(pcm_data)} bytes[/dim]"
-                    )
+                    logger.debug("Extracted PCM from WAV: %s bytes", len(pcm_data))
                 else:
-                    console.print(
-                        f"[red]Unexpected audio_response type: {type(audio_response)}[/red]"
-                    )
+                    logger.error("Unexpected audio_response type: %s", type(audio_response))
                     return
 
                 if not pcm_data:
-                    console.print("[red]No PCM data available[/red]")
+                    logger.error("No PCM data available")
                     return
 
-                console.print(
-                    f"[green]✓ PCM data ready: {len(pcm_data)} bytes[/green]"
-                )
+                logger.debug("PCM data ready: %s bytes", len(pcm_data))
 
                 # Stream PCM in smaller chunks for real-time playback
                 chunk_size = 4096  # Stream in 4KB chunks
@@ -209,17 +196,12 @@ class VoiceService:
                 for i in range(0, len(pcm_data), chunk_size):
                     pcm_chunk = pcm_data[i: i + chunk_size]
                     chunk_count += 1
-                    console.print(
-                        f"[dim]📤 Streaming PCM chunk {chunk_count}: {len(pcm_chunk)} bytes[/dim]"
-                    )
                     yield pcm_chunk
 
-                console.print(
-                    f"[green]✓ Streamed {chunk_count} PCM chunks[/green]"
-                )
+                logger.debug("Streamed %s PCM chunks", chunk_count)
 
             except Exception as e:
-                console.print(f"[red]PCM streaming error: {e}[/red]")
+                logger.exception("PCM streaming error: %s", e)
                 raise
 
         return transcribed_text, pcm_audio_iterator()
@@ -241,7 +223,7 @@ class VoiceService:
         response_text = await self.agent.chat_text(text, speak_response=False)
 
         # Generate audio response
-        console.print(f"[cyan]Generating audio for: {response_text}[/cyan]")
+        logger.debug("Generating audio for: %s", response_text[:80] + "..." if len(response_text) > 80 else response_text)
 
         # Synthesize speech using the TTS model from voice pipeline
         from agents.voice import TTSModelSettings
@@ -250,25 +232,23 @@ class VoiceService:
         async def pcm_audio_iterator():
             try:
                 # Collect all WAV chunks first (TTS streams one complete WAV in chunks)
-                console.print("[dim]Collecting TTS chunks...[/dim]")
+                logger.debug("Collecting TTS chunks...")
                 wav_chunks = []
                 async for wav_chunk in self.agent._tts_model.run(response_text, TTSModelSettings()):
                     wav_chunks.append(wav_chunk)
 
                 # Combine into complete WAV file
                 complete_wav = b''.join(wav_chunks)
-                console.print(
-                    f"[dim]Complete WAV collected: {len(complete_wav)} bytes[/dim]")
+                logger.debug("Complete WAV collected: %s bytes", len(complete_wav))
 
                 # Extract PCM from complete WAV file
                 pcm_data = self._extract_pcm_from_wav(complete_wav)
 
                 if not pcm_data:
-                    console.print("[red]Failed to extract PCM from WAV[/red]")
+                    logger.error("Failed to extract PCM from WAV")
                     return
 
-                console.print(
-                    f"[green]✓ Extracted PCM: {len(pcm_data)} bytes[/green]")
+                logger.debug("Extracted PCM: %s bytes", len(pcm_data))
 
                 # Stream PCM in smaller chunks for real-time playback
                 chunk_size = 4096  # Stream in 4KB chunks
@@ -277,15 +257,12 @@ class VoiceService:
                 for i in range(0, len(pcm_data), chunk_size):
                     pcm_chunk = pcm_data[i:i + chunk_size]
                     chunk_count += 1
-                    console.print(
-                        f"[dim]📤 Streaming PCM chunk {chunk_count}: {len(pcm_chunk)} bytes[/dim]")
                     yield pcm_chunk
 
-                console.print(
-                    f"[green]✓ Streamed {chunk_count} PCM chunks[/green]")
+                logger.debug("Streamed %s PCM chunks", chunk_count)
 
             except Exception as e:
-                console.print(f"[red]TTS Error: {e}[/red]")
+                logger.exception("TTS Error: %s", e)
                 raise
 
         return response_text, pcm_audio_iterator()
@@ -339,24 +316,26 @@ class VoiceService:
                     wav_io = io.BytesIO(wav_file_data)
                     with wave.open(wav_io, 'rb') as wav_file:
                         if wav_count == 0:
-                            # Log WAV file parameters from first file
-                            console.print(
-                                f"[dim]WAV info: {wav_file.getnchannels()} ch, "
-                                f"{wav_file.getframerate()} Hz, "
-                                f"{wav_file.getsampwidth()} bytes/sample, "
-                                f"{wav_file.getnframes()} frames[/dim]"
+                            logger.debug(
+                                "WAV info: %s ch, %s Hz, %s bytes/sample, %s frames",
+                                wav_file.getnchannels(),
+                                wav_file.getframerate(),
+                                wav_file.getsampwidth(),
+                                wav_file.getnframes(),
                             )
                         # Read the PCM data (skip the WAV header)
                         pcm_chunk = wav_file.readframes(wav_file.getnframes())
                         if pcm_chunk:
                             all_pcm_chunks.append(pcm_chunk)
                             wav_count += 1
-                            console.print(
-                                f"[dim]Extracted PCM from WAV {wav_count}: {len(pcm_chunk)} bytes[/dim]"
-                            )
+                            logger.debug("Extracted PCM from WAV %s: %s bytes", wav_count, len(pcm_chunk))
                 except Exception as e:
-                    console.print(
-                        f"[yellow]Warning: Could not extract WAV {wav_count + 1} at position {position}: {e}[/yellow]")
+                    logger.warning(
+                        "Could not extract WAV %s at position %s: %s",
+                        wav_count + 1,
+                        position,
+                        e,
+                    )
                     # Move position forward to try next potential WAV file
                     # Try to find next RIFF header
                     next_riff = wav_data.find(b'RIFF', position + 1)
@@ -373,38 +352,34 @@ class VoiceService:
                 try:
                     wav_io = io.BytesIO(wav_data)
                     with wave.open(wav_io, 'rb') as wav_file:
-                        console.print(
-                            f"[dim]WAV info: {wav_file.getnchannels()} ch, "
-                            f"{wav_file.getframerate()} Hz, "
-                            f"{wav_file.getsampwidth()} bytes/sample, "
-                            f"{wav_file.getnframes()} frames[/dim]"
+                        logger.debug(
+                            "WAV info: %s ch, %s Hz, %s bytes/sample, %s frames",
+                            wav_file.getnchannels(),
+                            wav_file.getframerate(),
+                            wav_file.getsampwidth(),
+                            wav_file.getnframes(),
                         )
                         pcm_data = wav_file.readframes(wav_file.getnframes())
                         if pcm_data:
-                            console.print(
-                                f"[dim]Extracted PCM from single WAV: {len(pcm_data)} bytes[/dim]"
-                            )
+                            logger.debug("Extracted PCM from single WAV: %s bytes", len(pcm_data))
                             return pcm_data
                 except Exception as e:
-                    console.print(
-                        f"[yellow]Could not read as single WAV: {e}[/yellow]")
+                    logger.warning("Could not read as single WAV: %s", e)
 
-                console.print(
-                    f"[red]Error: Could not extract PCM from any WAV file[/red]")
+                logger.error("Could not extract PCM from any WAV file")
                 return None
 
             # Combine all PCM chunks
             combined_pcm = b"".join(all_pcm_chunks)
-            console.print(
-                f"[green]✓ Extracted PCM from {wav_count} WAV file(s): {len(combined_pcm)} total bytes[/green]"
+            logger.debug(
+                "Extracted PCM from %s WAV file(s): %s total bytes",
+                wav_count,
+                len(combined_pcm),
             )
             return combined_pcm
 
         except Exception as e:
-            console.print(
-                f"[red]Error extracting PCM from WAV: {e}[/red]")
-            import traceback
-            console.print(f"[red]{traceback.format_exc()}[/red]")
+            logger.exception("Error extracting PCM from WAV: %s", e)
             return None
 
     def get_available_voices(self) -> list[str]:

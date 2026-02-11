@@ -1,15 +1,13 @@
 """WebSocket routes for real-time voice communication."""
 
-import json
 import base64
-import asyncio
 import time
 from typing import Optional
-from fastapi import WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import WebSocket, WebSocketDisconnect
 from backend.services.voice_service import VoiceService
-from rich.console import Console
+from backend.logging_config import get_logger
 
-console = Console()
+logger = get_logger(__name__)
 
 # Global voice service instance (will be initialized in main.py)
 voice_service: Optional[VoiceService] = None
@@ -25,14 +23,13 @@ class ConnectionManager:
         """Accept WebSocket connection."""
         await websocket.accept()
         self.active_connections[client_id] = websocket
-        console.print(f"[green]✓ Client connected: {client_id}[/green]")
+        logger.info("Client connected: %s", client_id)
 
     def disconnect(self, client_id: str):
         """Remove WebSocket connection."""
         if client_id in self.active_connections:
             del self.active_connections[client_id]
-            console.print(
-                f"[yellow]✗ Client disconnected: {client_id}[/yellow]")
+            logger.info("Client disconnected: %s", client_id)
 
     async def send_message(self, client_id: str, message: dict):
         """Send message to specific client."""
@@ -40,30 +37,27 @@ class ConnectionManager:
             try:
                 await self.active_connections[client_id].send_json(message)
             except Exception as e:
-                console.print(
-                    f"[red]Error sending message to {client_id}: {e}[/red]")
+                logger.exception("Error sending message to %s: %s", client_id, e)
                 self.disconnect(client_id)
 
 
 manager = ConnectionManager()
 
 
+async def _send_error_and_idle(websocket: WebSocket, message: str) -> None:
+    """Send error and idle state to client; ignore send failures (connection may be closed)."""
+    try:
+        await websocket.send_json({"type": "error", "data": message})
+        await websocket.send_json({"type": "state", "data": "idle"})
+    except Exception:
+        pass
+
+
 async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket endpoint for voice communication.
-
-    Message format:
-    - Client → Server:
-      {
-        "type": "audio_chunk" | "text_message" | "start_recording" | "stop_recording",
-        "data": base64_encoded_audio | text_string,
-        "client_id": "unique_client_id"
-      }
-    - Server → Client:
-      {
-        "type": "state" | "transcription" | "audio_chunk" | "error",
-        "data": state_string | text | base64_audio | error_message
-      }
+    Errors (disconnect, MemoryError, etc.) are logged and close only this connection;
+    the server stays alive and keeps accepting new connections.
     """
     client_id = None
     audio_buffer = []
@@ -77,13 +71,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
         # Register connection immediately
         manager.active_connections[client_id] = websocket
-        console.print(f"[green]✓ Client connected: {client_id}[/green]")
+        logger.info("Client connected: %s", client_id)
 
         # Send connection confirmation
         await websocket.send_json({"type": "state", "data": "connected"})
-
-        # Try to get client_id from initial message if sent (non-blocking)
-        # This is optional - if client sends a connect message, we'll handle it in the main loop
 
         if not voice_service:
             await websocket.send_json({
@@ -92,7 +83,7 @@ async def websocket_endpoint(websocket: WebSocket):
             })
             return
 
-        # Main message loop
+        # Main message loop: on any error we log, notify client if possible, then exit loop
         while True:
             try:
                 message = await websocket.receive_json()
@@ -122,8 +113,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         audio_chunk = base64.b64decode(audio_data_b64)
                         audio_buffer.append(audio_chunk)
                     except Exception as e:
-                        console.print(
-                            f"[yellow]Error decoding audio: {e}[/yellow]")
+                        logger.warning("Error decoding audio from %s: %s", client_id, e)
 
                 elif msg_type == "stop_recording":
                     # Process complete audio
@@ -186,13 +176,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         await websocket.send_json({"type": "state", "data": "idle"})
 
                     except Exception as e:
-                        console.print(
-                            f"[red]Error processing audio: {e}[/red]")
-                        await websocket.send_json({
-                            "type": "error",
-                            "data": f"Processing error: {str(e)}",
-                        })
-                        await websocket.send_json({"type": "state", "data": "idle"})
+                        logger.exception("Error processing audio for %s: %s", client_id, e)
+                        await _send_error_and_idle(websocket, f"Processing error: {str(e)}")
 
                 elif msg_type == "text_message":
                     # Process text message
@@ -232,32 +217,23 @@ async def websocket_endpoint(websocket: WebSocket):
                             "data": "speaking",
                             "processing_time": round(processing_time, 3)
                         })
-                        console.print(
-                            "[cyan]🔊 Sending 'speaking' state to client[/cyan]")
 
                         audio_chunk_count = 0
                         async for audio_chunk in audio_response_iter:
                             audio_chunk_count += 1
                             audio_b64 = base64.b64encode(
                                 audio_chunk).decode("utf-8")
-                            console.print(
-                                f"[cyan]📤 Sending audio chunk {audio_chunk_count}: {len(audio_b64)} bytes (base64)[/cyan]")
                             await websocket.send_json({
                                 "type": "audio_chunk",
                                 "data": audio_b64,
                             })
 
-                        console.print(
-                            f"[green]✅ Sent {audio_chunk_count} audio chunks total[/green]")
+                        logger.debug("Sent %s audio chunks to %s", audio_chunk_count, client_id)
                         await websocket.send_json({"type": "state", "data": "idle"})
 
                     except Exception as e:
-                        console.print(f"[red]Error processing text: {e}[/red]")
-                        await websocket.send_json({
-                            "type": "error",
-                            "data": f"Processing error: {str(e)}",
-                        })
-                        await websocket.send_json({"type": "state", "data": "idle"})
+                        logger.exception("Error processing text for %s: %s", client_id, e)
+                        await _send_error_and_idle(websocket, f"Processing error: {str(e)}")
 
                 else:
                     await websocket.send_json({
@@ -266,21 +242,28 @@ async def websocket_endpoint(websocket: WebSocket):
                     })
 
             except WebSocketDisconnect:
+                logger.info("Client %s disconnected", client_id)
                 break
             except Exception as e:
-                console.print(f"[red]Error in message loop: {e}[/red]")
-                try:
-                    await websocket.send_json({
-                        "type": "error",
-                        "data": f"Server error: {str(e)}",
-                    })
-                except:
-                    pass  # Connection might be closed
+                # Log with full traceback (e.g. MemoryError, OSError) and exit loop
+                # so this connection closes cleanly and server stays alive
+                logger.exception(
+                    "Error in WebSocket message loop for %s: %s",
+                    client_id,
+                    e,
+                )
+                await _send_error_and_idle(websocket, f"Server error: {str(e)}")
+                break
 
     except WebSocketDisconnect:
-        console.print(f"[yellow]Client {client_id} disconnected[/yellow]")
+        logger.info("Client %s disconnected", client_id or "unknown")
     except Exception as e:
-        console.print(f"[red]WebSocket error: {e}[/red]")
+        # Catch-all so no exception kills the server (e.g. MemoryError, OSError)
+        logger.exception("WebSocket endpoint error for %s: %s", client_id, e)
+        try:
+            await _send_error_and_idle(websocket, f"Connection error: {str(e)}")
+        except Exception:
+            pass
     finally:
         if client_id:
             manager.disconnect(client_id)

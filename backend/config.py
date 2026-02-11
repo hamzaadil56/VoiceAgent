@@ -18,6 +18,7 @@ class BackendSettings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     reload: bool = False
+    log_level: str = "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
 
     # CORS Configuration
     cors_origins: list[str] = ["http://localhost:5173",
