@@ -21,7 +21,7 @@ class BackendSettings(BaseSettings):
 
     # CORS Configuration
     cors_origins: list[str] = ["http://localhost:5173",
-                               "http://localhost:3000", "http://localhost:5174"]
+                               "http://localhost:3000", "http://localhost:5174","https://voice-agent-nine-beige.vercel.app"]
 
     # WebSocket Configuration
     ws_max_connections: int = 100
