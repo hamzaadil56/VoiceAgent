@@ -1,4 +1,3 @@
-/** Submissions page — Living Interface botanical theme */
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../../app/AuthProvider";
@@ -51,33 +50,29 @@ export default function SubmissionsPage() {
 					<button
 						onClick={handleExport}
 						disabled={exporting || submissions.length === 0}
-						className="px-5 py-[9px] rounded-lg font-body font-semibold text-[13px] text-white transition-all duration-150 disabled:opacity-50 hover:opacity-90"
-						style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-teal)" }}
+						className="px-5 py-[9px] rounded-md font-medium text-[13px] text-white bg-forest-500 hover:bg-forest-600 transition-all duration-150 disabled:opacity-50 shadow-forest inline-flex items-center gap-1.5"
 					>
+						<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+							<path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+						</svg>
 						{exporting ? "Exporting..." : "Export CSV"}
 					</button>
 				}
 			/>
 			<PageBody>
 				{exportStatus && (
-					<div
-						className="rounded-xl p-3 border font-body text-[13px] text-text-secondary mb-4"
-						style={{ background: "var(--stone-50)", borderColor: "var(--border-subtle)" }}
-					>
+					<div className="rounded-md p-3 border-[0.5px] border-stone-100 bg-stone-50 text-[13px] text-text-secondary mb-4">
 						{exportStatus}
 					</div>
 				)}
 
 				{loading ? (
 					<div className="flex justify-center py-20">
-						<div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+						<div className="w-6 h-6 border-2 border-forest-500 border-t-transparent rounded-full animate-spin" />
 					</div>
 				) : error ? (
-					<div
-						className="rounded-2xl p-8 border text-center"
-						style={{ background: "var(--error-bg)", borderColor: "var(--error-border)" }}
-					>
-						<p className="font-body text-[14px]" style={{ color: "var(--color-error)" }}>{error}</p>
+					<div className="rounded-lg p-8 border text-center" style={{ background: "var(--error-bg)", borderColor: "var(--error-border)" }}>
+						<p className="text-sm text-error">{error}</p>
 					</div>
 				) : submissions.length === 0 ? (
 					<EmptyState

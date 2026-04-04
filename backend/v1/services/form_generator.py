@@ -1,5 +1,5 @@
 """Form generation service — parses admin natural language prompt into
-a structured form definition using OpenRouter (meta-llama/llama-3.3-70b-instruct).
+a structured form definition using Groq (Llama 3.3 70B).
 
 This does NOT use the Agents SDK (no tools needed). It's a simple
 LLM call that returns structured JSON.
@@ -15,10 +15,6 @@ from dataclasses import dataclass
 import litellm
 
 logger = logging.getLogger(__name__)
-
-# Bridge env var: our .env uses OPEN_ROUTER_API_KEY but LiteLLM expects OPENROUTER_API_KEY
-if os.getenv("OPEN_ROUTER_API_KEY") and not os.getenv("OPENROUTER_API_KEY"):
-    os.environ["OPENROUTER_API_KEY"] = os.getenv("OPEN_ROUTER_API_KEY", "")
 
 GENERATION_SYSTEM_PROMPT = """You are an AI form architect. Given a user's description of what information they want to collect, you produce a structured form definition as JSON.
 
@@ -64,7 +60,7 @@ class GeneratedForm:
 
 
 async def generate_form_from_prompt(prompt: str) -> GeneratedForm:
-    """Use OpenRouter LLM to generate a structured form definition from a natural language prompt.
+    """Use Groq LLM to generate a structured form definition from a natural language prompt.
 
     Args:
         prompt: Admin's natural language description of what to collect.
@@ -75,10 +71,12 @@ async def generate_form_from_prompt(prompt: str) -> GeneratedForm:
     Raises:
         ValueError: If the LLM response cannot be parsed.
     """
-    api_key = os.getenv("OPEN_ROUTER_API_KEY", "")
+    api_key = os.getenv("GROQ_API_KEY", "")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY is required for form generation")
 
     response = await litellm.acompletion(
-        model="openrouter/meta-llama/llama-3.3-70b-instruct",
+        model="groq/llama-3.3-70b-versatile",
         api_key=api_key,
         messages=[
             {"role": "system", "content": GENERATION_SYSTEM_PROMPT},

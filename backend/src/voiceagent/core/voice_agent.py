@@ -1,14 +1,14 @@
 """
 VoiceAgent - Voice pipeline using OpenAI Agents SDK.
 
-This implementation uses the SDK's VoicePipeline with custom models:
+Uses the SDK's VoicePipeline with Groq-backed models:
 - STT: Groq Whisper
 - LLM: Groq Llama (via LiteLLM)
-- TTS: Google TTS (gTTS)
+- TTS: Groq PlayAI TTS
 """
 
 from ..models.groq_llm import create_groq_model
-from ..models import CustomVoiceModelProvider
+from ..models import GroqVoiceModelProvider
 from ..config.settings import Settings
 from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
 from agents.voice import (
@@ -25,8 +25,8 @@ from rich.console import Console
 
 try:
     import sounddevice as sd
-except OSError:
-    # PortAudio not available (e.g. Vercel serverless, no audio device)
+except (OSError, ImportError):
+    # Optional local playback (install `local-audio` extra) or no PortAudio
     sd = None
 
 # Suppress Pydantic warnings from LiteLLM
@@ -41,7 +41,7 @@ class VoiceAgent:
     Voice Agent using OpenAI Agents SDK VoicePipeline.
 
     Architecture:
-    Audio Input → Groq STT → Agent (Groq LLM) → gTTS → Audio Output
+    Audio Input → Groq STT → Agent (Groq LLM) → Groq PlayAI TTS → Audio Output
     """
 
     def __init__(self, settings: Optional[Settings] = None):
@@ -81,11 +81,10 @@ class VoiceAgent:
             ),
         )
 
-        # Create custom voice model provider (STT + TTS)
-        voice_provider = CustomVoiceModelProvider(
+        voice_provider = GroqVoiceModelProvider(
             groq_api_key=self.settings.groq_api_key,
             stt_model=self.settings.stt_model,
-            lm_studio_url=self.settings.lm_studio_url,
+            tts_model=self.settings.tts_model,
             tts_voice=self.settings.tts_voice,
         )
 
@@ -106,7 +105,7 @@ class VoiceAgent:
         console.print(f"[cyan]  STT: {self.settings.stt_model} (Groq)[/cyan]")
         console.print(f"[cyan]  LLM: {self.settings.llm_model} (Groq)[/cyan]")
         console.print(
-            f"[cyan]  TTS: Orpheus TTS - {self.settings.tts_voice} (LM Studio + SNAC)[/cyan]")
+            f"[cyan]  TTS: {self.settings.tts_model} / {self.settings.tts_voice} (Groq)[/cyan]")
 
     async def process_voice_input(
         self, audio_buffer: np.ndarray, play_response: bool = True
@@ -154,8 +153,10 @@ class VoiceAgent:
                 player.stop()
                 player.close()
 
-        # Combine all audio chunks
-        audio_response = b"".join(audio_chunks)
+        # Combine all audio chunks (SDK emits numpy int16 arrays)
+        audio_response = b"".join(
+            c.tobytes() if isinstance(c, np.ndarray) else bytes(c) for c in audio_chunks
+        )
 
         console.print(f"[green]✓ Transcription:[/green] {transcribed_text}")
         console.print(
@@ -304,7 +305,6 @@ class VoiceAgent:
             text: Text to synthesize
         """
         from agents.voice import TTSModelSettings
-        import soundfile as sf
         import io
 
         try:
@@ -319,33 +319,35 @@ class VoiceAgent:
                 console.print("[yellow]⚠ No audio generated[/yellow]")
                 return
 
-            # Combine chunks
+            # Combine chunks (GroqTTSModel yields raw int16 PCM at 24 kHz)
             audio_data = b"".join(audio_chunks)
 
             # Play audio using sounddevice (when available)
-            # TTS models output WAV format, so read it with soundfile
             if sd is not None:
                 try:
-                    audio_io = io.BytesIO(audio_data)
+                    if len(audio_data) >= 4 and audio_data[:4] == b"RIFF":
+                        import soundfile as sf
 
-                    # Read WAV file from bytes
-                    audio_array, sample_rate = sf.read(audio_io, dtype="float32")
-
-                    # Convert to mono if stereo
-                    if len(audio_array.shape) > 1:
-                        audio_array = audio_array[:, 0]
-
-                    # Normalize audio (optional, but helps with playback)
-                    max_val = abs(audio_array).max() if len(
-                        audio_array) > 0 else 1.0
-                    if max_val > 0:
-                        audio_array = audio_array / max_val
-
-                    # Play audio
-                    console.print("[dim]🔊 Playing response...[/dim]")
-                    sd.play(audio_array, samplerate=sample_rate)
-                    sd.wait()
-
+                        audio_io = io.BytesIO(audio_data)
+                        audio_array, sample_rate = sf.read(audio_io, dtype="float32")
+                        if len(audio_array.shape) > 1:
+                            audio_array = audio_array[:, 0]
+                        max_val = abs(audio_array).max() if len(audio_array) > 0 else 1.0
+                        if max_val > 0:
+                            audio_array = audio_array / max_val
+                        console.print("[dim]🔊 Playing response...[/dim]")
+                        sd.play(audio_array, samplerate=sample_rate)
+                        sd.wait()
+                    else:
+                        pcm = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+                        if len(pcm) == 0:
+                            console.print("[yellow]⚠ No audio samples[/yellow]")
+                            return
+                        console.print("[dim]🔊 Playing response...[/dim]")
+                        sd.play(pcm, samplerate=24000)
+                        sd.wait()
+                except ImportError:
+                    console.print("[dim]🔊 Playback skipped (install soundfile for WAV fallback)[/dim]")
                 except Exception as e:
                     console.print(
                         f"[yellow]⚠ Could not play audio: {str(e)}[/yellow]")

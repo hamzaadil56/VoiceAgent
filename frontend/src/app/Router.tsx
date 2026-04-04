@@ -13,7 +13,7 @@ const LegacyVoicePage = lazy(() => import("../features/legacy-voice/pages/Legacy
 function PageLoader() {
 	return (
 		<div className="flex items-center justify-center min-h-screen" style={{ background: "var(--bg-page)" }}>
-			<div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+			<div className="w-6 h-6 border-2 border-forest-500 border-t-transparent rounded-full animate-spin" />
 		</div>
 	);
 }

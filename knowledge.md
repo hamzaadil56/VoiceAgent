@@ -15,9 +15,8 @@ Real-time voice agent: browser-based frontend captures audio, streams it over We
 
 ## Environment variables
 Backend `.env` (in `backend/` directory):
-- `GROQ_API_KEY` – Groq API key (STT/LLM)
-- `OPENAI_API_KEY` – OpenAI API key (TTS)
-- Optional: `HOST`, `PORT`, `RELOAD`, `LOG_LEVEL`
+- `GROQ_API_KEY` – Groq API key (STT, LLM, PlayAI TTS)
+- Optional: `OPENAI_API_KEY` (only if you use OpenAI elsewhere), `HOST`, `PORT`, `RELOAD`, `LOG_LEVEL`
 
 Frontend: `VITE_BACKEND_URL`, `VITE_WS_URL` (defaults to localhost:8000)
 
@@ -35,7 +34,7 @@ Frontend: `VITE_BACKEND_URL`, `VITE_WS_URL` (defaults to localhost:8000)
   - `src/hooks/` – React hooks (useAudio, useWebSocket, useServices)
   - `src/services/` – Audio/WebSocket/SilenceDetection service managers
   - `src/viewmodels/` – MVVM view models for VoiceBot
-- **Data flow:** Browser mic → WebSocket (WebM/WAV) → FastAPI → VoiceService → STT (Groq) → LLM → TTS → PCM stream back over WebSocket → Browser playback
+- **Data flow:** Browser mic → WebSocket (WebM/WAV) → FastAPI → OpenAI Agents SDK `VoicePipeline` (Groq STT → agent → Groq TTS) → PCM over WebSocket → Browser playback. Consumer forms use `FormAgentVoiceWorkflow` + same Groq voice stack.
 
 ## Deployment
 - Backend: Docker image pushed to Docker Hub via GitHub Actions on push to `main`, deployed to VPS via SSH + docker compose

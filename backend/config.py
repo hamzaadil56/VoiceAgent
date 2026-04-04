@@ -32,9 +32,3 @@ class BackendSettings(BaseSettings):
     audio_sample_rate: int = 24000
     audio_channels: int = 1
     audio_chunk_size: int = 4096
-
-    # TTS spin endpoint auth (Bearer token)
-    tts_api_key: str = ""
-
-    # Voice: use OpenRouter gpt-audio-mini for audio-in → text-out (then TTS for playback)
-    use_gpt_audio_mini_voice: bool = True

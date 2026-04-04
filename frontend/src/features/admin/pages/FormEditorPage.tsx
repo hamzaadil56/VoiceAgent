@@ -1,4 +1,3 @@
-/** Form editor page — Living Interface botanical theme */
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../app/AuthProvider";
@@ -88,17 +87,6 @@ export default function FormEditorPage() {
 		}
 	};
 
-	const inputClass = "w-full px-4 py-[10px] rounded-lg font-body text-text-primary text-[15px] outline-none transition-all placeholder:text-text-muted";
-	const inputStyle = { background: "var(--stone-0)", border: "1.5px solid var(--stone-200)" };
-	const inputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-		e.currentTarget.style.borderColor = "var(--teal-400)";
-		e.currentTarget.style.boxShadow = "0 0 0 3px rgba(20,184,166,0.12)";
-	};
-	const inputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-		e.currentTarget.style.borderColor = "var(--stone-200)";
-		e.currentTarget.style.boxShadow = "none";
-	};
-
 	return (
 		<AdminShell email={admin?.email} onLogout={() => { logout(); navigate("/admin/login"); }}>
 			<PageHeader
@@ -119,29 +107,21 @@ export default function FormEditorPage() {
 					/>
 
 					{/* Form Settings */}
-					<section
-						className="rounded-2xl p-6 space-y-4"
-						style={{ background: "var(--stone-0)", border: "1px solid var(--border-default)" }}
-					>
-						<h2 className="font-body text-[11px] font-semibold uppercase tracking-widest text-text-muted">
+					<section className="bg-bg-base rounded-lg border-[0.5px] border-stone-200 p-6 space-y-4">
+						<h2 className="text-[11px] font-medium uppercase tracking-[0.06em] text-text-tertiary">
 							Form Settings
 						</h2>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<FieldInput label="Title" id="title" value={title} onChange={setTitle} placeholder="Form title" required
-								inputClass={inputClass} inputStyle={inputStyle} onFocus={inputFocus} onBlur={inputBlur} />
-							<FieldInput label="URL Slug" id="slug" value={slug} onChange={setSlug} placeholder="my-form" required mono
-								inputClass={inputClass} inputStyle={inputStyle} onFocus={inputFocus} onBlur={inputBlur} />
+							<FieldInput label="Title" id="title" value={title} onChange={setTitle} placeholder="Form title" required />
+							<FieldInput label="URL Slug" id="slug" value={slug} onChange={setSlug} placeholder="my-form" required mono />
 						</div>
 						<div>
-							<label htmlFor="description" className="block font-body text-[11px] font-semibold uppercase tracking-widest text-text-secondary mb-2">
+							<label htmlFor="description" className="block text-[13px] font-medium text-text-primary mb-[5px]">
 								Description
 							</label>
 							<textarea
 								id="description"
-								className={inputClass + " resize-none"}
-								style={inputStyle}
-								onFocus={inputFocus}
-								onBlur={inputBlur}
+								className="w-full px-3 py-[9px] rounded-md text-sm text-text-primary border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all placeholder:text-text-tertiary focus:border-forest-500 focus:shadow-forest-ring resize-none"
 								value={description}
 								onChange={(e) => setDescription(e.target.value)}
 								placeholder="Describe what this form collects"
@@ -150,15 +130,12 @@ export default function FormEditorPage() {
 						</div>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div>
-								<label htmlFor="mode" className="block font-body text-[11px] font-semibold uppercase tracking-widest text-text-secondary mb-2">
+								<label htmlFor="mode" className="block text-[13px] font-medium text-text-primary mb-[5px]">
 									Mode
 								</label>
 								<select
 									id="mode"
-									className={inputClass}
-									style={inputStyle}
-									onFocus={inputFocus}
-									onBlur={inputBlur}
+									className="w-full px-3 py-[9px] rounded-md text-sm text-text-primary border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all focus:border-forest-500 focus:shadow-forest-ring"
 									value={mode}
 									onChange={(e) => setMode(e.target.value as typeof mode)}
 								>
@@ -167,20 +144,16 @@ export default function FormEditorPage() {
 									<option value="chat_voice">Chat + Voice</option>
 								</select>
 							</div>
-							<FieldInput label="Bot Persona" id="persona" value={persona} onChange={setPersona} placeholder="Friendly and professional"
-								inputClass={inputClass} inputStyle={inputStyle} onFocus={inputFocus} onBlur={inputBlur} />
+							<FieldInput label="Bot Persona" id="persona" value={persona} onChange={setPersona} placeholder="Friendly and professional" />
 						</div>
 						<div>
-							<label htmlFor="system-prompt" className="block font-body text-[11px] font-semibold uppercase tracking-widest text-text-secondary mb-2">
+							<label htmlFor="system-prompt" className="block text-[13px] font-medium text-text-primary mb-[5px]">
 								Agent Instructions{" "}
-								<span className="text-text-muted font-normal normal-case tracking-normal">(auto-generated, editable)</span>
+								<span className="text-text-tertiary font-normal">(auto-generated, editable)</span>
 							</label>
 							<textarea
 								id="system-prompt"
-								className={inputClass + " text-[13px] font-mono resize-none"}
-								style={inputStyle}
-								onFocus={inputFocus}
-								onBlur={inputBlur}
+								className="w-full px-3 py-[9px] rounded-md text-[13px] font-mono text-text-primary border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all placeholder:text-text-tertiary focus:border-forest-500 focus:shadow-forest-ring resize-none"
 								value={systemPrompt}
 								onChange={(e) => setSystemPrompt(e.target.value)}
 								placeholder="Instructions for the conversational agent..."
@@ -191,25 +164,19 @@ export default function FormEditorPage() {
 
 					{/* Fields Summary */}
 					{fields.length > 0 && (
-						<section
-							className="rounded-2xl p-6"
-							style={{ background: "var(--stone-0)", border: "1px solid var(--border-default)" }}
-						>
-							<h2 className="font-body text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-3">
+						<section className="bg-bg-base rounded-lg border-[0.5px] border-stone-200 p-6">
+							<h2 className="text-[11px] font-medium uppercase tracking-[0.06em] text-text-tertiary mb-3">
 								Fields ({fields.length})
 							</h2>
-							<div className="space-y-2 text-[13px] font-body">
+							<div className="space-y-2 text-[13px]">
 								{fields.map((field, i) => (
 									<div key={field.name} className="flex items-center gap-3">
-										<span className="text-text-muted w-5 text-right">{i + 1}.</span>
-										<span className="font-mono text-teal-600">{field.name}</span>
-										<span
-											className="text-[11px] px-2 py-0.5 rounded font-body"
-											style={{ background: "var(--stone-50)", color: "var(--text-muted)" }}
-										>
+										<span className="text-text-tertiary w-5 text-right">{i + 1}.</span>
+										<span className="font-mono text-forest-600">{field.name}</span>
+										<span className="text-[11px] px-2 py-0.5 rounded bg-stone-50 text-text-tertiary">
 											{field.type}
 										</span>
-										{field.required && <span className="text-[11px]" style={{ color: "var(--color-warning)" }}>required</span>}
+										{field.required && <span className="text-[11px] text-warning">required</span>}
 										{field.description && <span className="text-text-secondary text-[11px] truncate max-w-[200px]">{field.description}</span>}
 									</div>
 								))}
@@ -223,8 +190,7 @@ export default function FormEditorPage() {
 							<button
 								type="submit"
 								disabled={saving || (!systemPrompt && fields.length === 0)}
-								className="px-6 py-[10px] rounded-lg font-body font-semibold text-[13px] text-white transition-all duration-150 disabled:opacity-50 hover:opacity-90"
-								style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-teal)" }}
+								className="px-6 py-[9px] rounded-md font-medium text-[13px] text-white bg-forest-500 hover:bg-forest-600 transition-all duration-150 disabled:opacity-50 shadow-forest"
 							>
 								{saving ? "Creating..." : "Create Draft Form"}
 							</button>
@@ -234,31 +200,20 @@ export default function FormEditorPage() {
 									type="button"
 									onClick={handlePublish}
 									disabled={saving}
-									className="px-6 py-[10px] rounded-lg font-body font-semibold text-[13px] text-white transition-all duration-150 disabled:opacity-50 hover:opacity-90"
-									style={{ background: "var(--gradient-action)", boxShadow: "var(--shadow-coral)" }}
+									className="px-6 py-[9px] rounded-md font-medium text-[13px] text-white bg-clay-500 hover:bg-clay-600 transition-all duration-150 disabled:opacity-50 shadow-clay"
 								>
 									{saving ? "Publishing..." : "Publish Form"}
 								</button>
 								<Link
 									to={`/f/${createdForm.slug}`}
 									target="_blank"
-									className="px-6 py-[10px] rounded-lg font-body font-medium text-[13px] transition-all inline-flex items-center hover:text-text-primary"
-									style={{
-										background: "var(--stone-50)",
-										border: "1px solid var(--border-default)",
-										color: "var(--text-secondary)",
-									}}
+									className="px-6 py-[9px] rounded-md text-[13px] text-text-secondary bg-bg-base border-[0.5px] border-stone-200 hover:border-stone-300 hover:text-text-primary transition-all inline-flex items-center"
 								>
 									Preview ↗
 								</Link>
 								<Link
 									to={`/admin/forms/${createdForm.id}/submissions`}
-									className="px-6 py-[10px] rounded-lg font-body font-medium text-[13px] transition-all inline-flex items-center hover:text-text-primary"
-									style={{
-										background: "var(--stone-50)",
-										border: "1px solid var(--border-default)",
-										color: "var(--text-secondary)",
-									}}
+									className="px-6 py-[9px] rounded-md text-[13px] text-text-secondary bg-bg-base border-[0.5px] border-stone-200 hover:border-stone-300 hover:text-text-primary transition-all inline-flex items-center"
 								>
 									Submissions
 								</Link>
@@ -267,12 +222,7 @@ export default function FormEditorPage() {
 						<button
 							type="button"
 							onClick={() => navigate("/admin")}
-							className="px-6 py-[10px] rounded-lg font-body text-[13px] transition-all hover:text-text-primary"
-							style={{
-								background: "var(--stone-50)",
-								border: "1px solid var(--border-default)",
-								color: "var(--text-secondary)",
-							}}
+							className="px-6 py-[9px] rounded-md text-[13px] text-text-secondary bg-bg-base border-[0.5px] border-stone-200 hover:border-stone-300 hover:text-text-primary transition-all"
 						>
 							Cancel
 						</button>
@@ -281,7 +231,7 @@ export default function FormEditorPage() {
 
 				{status && (
 					<div
-						className="mt-6 rounded-xl p-4 border font-body text-[13px]"
+						className="mt-6 rounded-md p-4 border-[0.5px] text-[13px]"
 						style={
 							status.includes("fail") || status.includes("error")
 								? { borderColor: "var(--error-border)", color: "var(--color-error)", background: "var(--error-bg)" }
@@ -298,26 +248,18 @@ export default function FormEditorPage() {
 
 function FieldInput({
 	label, id, value, onChange, placeholder, required, mono,
-	inputClass, inputStyle, onFocus, onBlur,
 }: {
 	label: string; id: string; value: string; onChange: (v: string) => void;
 	placeholder: string; required?: boolean; mono?: boolean;
-	inputClass: string;
-	inputStyle: React.CSSProperties;
-	onFocus: (e: React.FocusEvent<HTMLInputElement>) => void;
-	onBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
 }) {
 	return (
 		<div>
-			<label htmlFor={id} className="block font-body text-[11px] font-semibold uppercase tracking-widest text-text-secondary mb-2">
+			<label htmlFor={id} className="block text-[13px] font-medium text-text-primary mb-[5px]">
 				{label}
 			</label>
 			<input
 				id={id}
-				className={`${inputClass}${mono ? " font-mono text-[13px]" : ""}`}
-				style={inputStyle}
-				onFocus={onFocus}
-				onBlur={onBlur}
+				className={`w-full px-3 py-[9px] rounded-md text-sm text-text-primary border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all placeholder:text-text-tertiary focus:border-forest-500 focus:shadow-forest-ring${mono ? " font-mono text-[13px]" : ""}`}
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}

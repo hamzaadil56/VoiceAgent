@@ -8,8 +8,8 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 export function Card({ elevated = false, children, className = "", ...props }: CardProps) {
 	return (
 		<div
-			className={`rounded-2xl border border-border/40 p-6 ${
-				elevated ? "glass-elevated" : "glass"
+			className={`bg-bg-base border-[0.5px] border-stone-200 rounded-lg p-4 ${
+				elevated ? "shadow-md" : ""
 			} ${className}`}
 			{...props}
 		>
@@ -28,7 +28,7 @@ export function CardHeader({ title, description, action }: CardHeaderProps) {
 	return (
 		<div className="flex items-center justify-between mb-4">
 			<div>
-				<h2 className="text-lg font-heading font-bold text-text-primary">
+				<h2 className="text-lg font-heading font-medium text-text-primary">
 					{title}
 				</h2>
 				{description && (

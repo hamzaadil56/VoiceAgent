@@ -3,168 +3,140 @@
 @tailwind utilities;
 
 /* ================================================================
-   DESIGN TOKENS — Living Interface (Botanical Palette)
+   DESIGN TOKENS — AgentForms Natural Palette v2.0
+   Forest teal · Fired clay · Sage · Warm stone
    ================================================================ */
 
 :root {
   /* ═══════════════════════════════
-     BRAND CORE — Teal + Sage
+     PRIMARY — Forest Teal
   ═══════════════════════════════ */
-  --teal-50:  #f0fdfa;
-  --teal-100: #ccfbf1;
-  --teal-200: #99f6e4;
-  --teal-300: #5eead4;
-  --teal-400: #2dd4bf;
-  --teal-500: #14b8a6;
-  --teal-600: #0d9488;
-  --teal-700: #0f766e;
-  --teal-800: #115e59;
-  --teal-900: #134e4a;
+  --forest-50:  #F0F6F4;
+  --forest-100: #E8F2EF;
+  --forest-200: #C3DDD7;
+  --forest-300: #7DB8AC;
+  --forest-400: #4A8C78;
+  --forest-500: #2D6A5A;
+  --forest-600: #1C4A3E;
+  --forest-700: #123329;
+  --forest-900: #0A1F18;
 
-  --sage-50:  #f6f9f4;
-  --sage-100: #e8f0e3;
-  --sage-200: #ccdfc4;
-  --sage-300: #a7c79b;
-  --sage-400: #7ead6f;
-  --sage-500: #5d9150;
-  --sage-600: #4a7840;
+  /* ═══════════════════════════════
+     CHAT ACCENT — Fired Clay
+  ═══════════════════════════════ */
+  --clay-50:  #FBF3EF;
+  --clay-100: #F5EAE4;
+  --clay-200: #E8C9BA;
+  --clay-300: #C8815F;
+  --clay-400: #A85A3A;
+  --clay-500: #8C4A2F;
+  --clay-600: #6B2810;
+  --clay-800: #4A1A08;
 
-  --coral-50:   #fff4f1;
-  --coral-100:  #ffe4dd;
-  --coral-200:  #ffbfb0;
-  --coral-300:  #ff9580;
-  --coral-400:  #ff6b52;
-  --coral-500:  #f4523a;
-  --coral-600:  #d93d27;
-  --coral-glow: rgba(255, 107, 82, 0.18);
-  --coral-ring: rgba(255, 107, 82, 0.35);
-
-  --lavender-50:   #f5f3ff;
-  --lavender-100:  #ede9fe;
-  --lavender-200:  #ddd6fe;
-  --lavender-300:  #c4b5fd;
-  --lavender-400:  #a78bfa;
-  --lavender-500:  #8b5cf6;
-  --lavender-600:  #7c3aed;
-  --lavender-glow: rgba(167, 139, 250, 0.15);
-  --lavender-ring: rgba(167, 139, 250, 0.35);
-
-  --blush-100: #fce7f3;
-  --blush-200: #fbcfe8;
-  --blush-400: #f472b6;
-  --blush-500: #ec4899;
+  /* ═══════════════════════════════
+     VOICE ACCENT — Sage
+  ═══════════════════════════════ */
+  --sage-50:  #F2F6EE;
+  --sage-100: #EBF2E6;
+  --sage-200: #CDDFC3;
+  --sage-300: #8DB37A;
+  --sage-400: #6A9455;
+  --sage-500: #5A7A4A;
+  --sage-600: #3A5A2A;
+  --sage-800: #243818;
 
   /* ═══════════════════════════════
      NEUTRAL — Warm Stone
   ═══════════════════════════════ */
-  --stone-0:   #ffffff;
-  --stone-25:  #fafaf9;
-  --stone-50:  #f7f6f4;
-  --stone-100: #f0edea;
-  --stone-150: #e8e4df;
-  --stone-200: #ddd8d1;
-  --stone-300: #c8c1b8;
-  --stone-400: #a89f95;
-  --stone-500: #877d72;
-  --stone-600: #6b6059;
-  --stone-700: #4e4540;
-  --stone-800: #342f2b;
-  --stone-900: #1c1917;
+  --stone-0:   #FFFFFF;
+  --stone-50:  #F7F5F0;
+  --stone-100: #EAE7DF;
+  --stone-200: #D4D0C5;
+  --stone-300: #B8B4A6;
+  --stone-400: #9C9888;
+  --stone-500: #7A7668;
+  --stone-600: #5C5A50;
+  --stone-700: #4A4840;
+  --stone-800: #3A3830;
+  --stone-900: #1E1D18;
 
   /* ═══════════════════════════════
-     ADMIN + CONSUMER (both light)
+     SEMANTIC SURFACES
   ═══════════════════════════════ */
-  --bg-page:     var(--stone-25);
+  --bg-page:     var(--stone-50);
   --bg-base:     var(--stone-0);
   --bg-raised:   var(--stone-0);
-  --bg-elevated: var(--stone-50);
-  --bg-overlay:  var(--stone-100);
+  --bg-elevated: var(--stone-100);
+  --bg-overlay:  var(--stone-200);
 
   --text-primary:   var(--stone-900);
   --text-secondary: var(--stone-600);
+  --text-tertiary:  var(--stone-400);
   --text-muted:     var(--stone-400);
-  --text-faint:     var(--stone-300);
 
-  --border-subtle:  rgba(0, 0, 0, 0.06);
-  --border-default: rgba(0, 0, 0, 0.10);
-  --border-strong:  rgba(0, 0, 0, 0.18);
-  --border-teal:    rgba(20, 184, 166, 0.40);
-  --border-coral:   rgba(255, 107, 82, 0.40);
+  --border-subtle:  var(--stone-100);
+  --border-default: var(--stone-200);
+  --border-strong:  var(--stone-400);
 
   /* Typography */
-  --font-display: 'Montserrat', sans-serif;
-  --font-body:    'Poppins', sans-serif;
+  --font-heading: 'Lora', Georgia, serif;
+  --font-body:    'Inter', system-ui, sans-serif;
   --font-mono:    'JetBrains Mono', monospace;
 
   /* ═══════════════════════════════
-     SEMANTIC
+     SEMANTIC COLORS
   ═══════════════════════════════ */
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-error:   #ef4444;
-  --color-info:    var(--teal-500);
+  --color-primary:       var(--forest-500);
+  --color-primary-light: var(--forest-100);
+  --color-chat:          var(--clay-500);
+  --color-chat-light:    var(--clay-100);
+  --color-voice:         var(--sage-500);
+  --color-voice-light:   var(--sage-100);
+  --color-success:       var(--forest-500);
+  --color-warning:       #A07030;
+  --color-danger:        #8C2020;
+  --color-error:         #8C2020;
 
-  --success-bg:     rgba(16, 185, 129, 0.08);
-  --success-border: rgba(16, 185, 129, 0.25);
-  --warning-bg:     rgba(245, 158, 11, 0.08);
-  --error-bg:       rgba(239, 68, 68, 0.08);
-  --error-border:   rgba(239, 68, 68, 0.25);
-  --info-bg:        rgba(20, 184, 166, 0.08);
-
-  /* ═══════════════════════════════
-     GRADIENTS
-  ═══════════════════════════════ */
-  --gradient-brand:  linear-gradient(135deg, var(--teal-500) 0%, var(--lavender-500) 100%);
-  --gradient-action: linear-gradient(135deg, var(--coral-400) 0%, var(--blush-500) 100%);
-  --gradient-nature: linear-gradient(135deg, var(--sage-400) 0%, var(--teal-400) 100%);
-  --gradient-dawn:   linear-gradient(135deg, #fdd8b5 0%, #f9b5c8 50%, #c4b5fd 100%);
-  --gradient-page-hero: linear-gradient(
-    160deg,
-    rgba(20, 184, 166, 0.06) 0%,
-    rgba(167, 139, 250, 0.04) 40%,
-    rgba(255, 107, 82, 0.04) 100%
-  );
-  --mesh-bg:
-    radial-gradient(ellipse 80% 50% at 10% 0%,   rgba(20,184,166,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 90% 10%,  rgba(167,139,250,0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 60% at 50% 100%, rgba(255,107,82,0.06) 0%, transparent 60%),
-    var(--stone-25);
+  --success-bg:     rgba(45, 106, 90, 0.08);
+  --success-border: rgba(45, 106, 90, 0.25);
+  --warning-bg:     rgba(160, 112, 48, 0.08);
+  --warning-border: rgba(160, 112, 48, 0.25);
+  --error-bg:       rgba(140, 32, 32, 0.08);
+  --error-border:   rgba(140, 32, 32, 0.25);
 
   /* ═══════════════════════════════
-     SHADOWS — colored
+     SHADOWS — warm undertone
   ═══════════════════════════════ */
-  --shadow-xs: 0 1px 3px rgba(28,25,23,0.06);
-  --shadow-sm: 0 2px 6px rgba(28,25,23,0.08), 0 1px 2px rgba(28,25,23,0.05);
-  --shadow-md: 0 4px 16px rgba(28,25,23,0.10), 0 2px 4px rgba(28,25,23,0.06);
-  --shadow-lg: 0 12px 32px rgba(28,25,23,0.12), 0 4px 8px rgba(28,25,23,0.06);
-  --shadow-xl: 0 24px 56px rgba(28,25,23,0.14);
-  --shadow-teal:    0 4px 24px rgba(20,184,166,0.25);
-  --shadow-coral:   0 4px 24px rgba(255,107,82,0.25);
-  --shadow-lavender:0 4px 24px rgba(167,139,250,0.22);
+  --shadow-xs:     0 1px 3px rgba(30, 29, 24, 0.06);
+  --shadow-sm:     0 1px 4px rgba(30, 29, 24, 0.06);
+  --shadow-md:     0 4px 14px rgba(30, 29, 24, 0.10);
+  --shadow-lg:     0 12px 32px rgba(30, 29, 24, 0.12);
+  --shadow-xl:     0 16px 48px rgba(30, 29, 24, 0.14);
+  --shadow-forest: 0 4px 16px rgba(45, 106, 90, 0.20);
+  --shadow-clay:   0 4px 16px rgba(140, 74, 47, 0.20);
+  --shadow-sage:   0 4px 16px rgba(90, 122, 74, 0.20);
 
   /* ═══════════════════════════════
      BORDER RADIUS
   ═══════════════════════════════ */
-  --radius-sm:   4px;
+  --radius-xs:   4px;
+  --radius-sm:   6px;
   --radius-md:   8px;
   --radius-lg:   12px;
   --radius-xl:   16px;
-  --radius-2xl:  20px;
-  --radius-3xl:  28px;
+  --radius-2xl:  24px;
   --radius-full: 9999px;
 
   /* ═══════════════════════════════
-     SPACING (8pt grid)
+     SPACING (4pt base)
   ═══════════════════════════════ */
-  --space-1:  0.25rem;
-  --space-2:  0.5rem;
-  --space-3:  0.75rem;
-  --space-4:  1rem;
-  --space-5:  1.25rem;
-  --space-6:  1.5rem;
-  --space-8:  2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
+  --space-1:  0.25rem;   /* 4px */
+  --space-2:  0.5rem;    /* 8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-12: 3rem;      /* 48px */
 }
 
 /* ================================================================
@@ -185,6 +157,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  line-height: 1.6;
 }
 
 #root {
@@ -197,13 +170,13 @@ body {
    ================================================================ */
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
 }
 
-.font-display { font-family: var(--font-display); }
+.font-heading { font-family: var(--font-heading); }
 .font-body    { font-family: var(--font-body); }
 .font-mono    { font-family: var(--font-mono); }
 
@@ -221,14 +194,14 @@ h1, h2, h3, h4, h5, h6 {
    ================================================================ */
 
 .card {
-  background: var(--stone-0);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-2xl);
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  background: var(--bg-base);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out;
 }
 .card:hover {
-  border-color: var(--teal-200);
-  box-shadow: var(--shadow-md);
+  border-color: var(--forest-200);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ================================================================
@@ -237,34 +210,41 @@ h1, h2, h3, h4, h5, h6 {
 
 .consumer-runtime {
   min-height: 100vh;
-  background: var(--stone-25);
-  background-image: var(--mesh-bg);
+  background: var(--bg-page);
   font-family: var(--font-body);
   color: var(--text-primary);
 }
 
 /* Chat bubbles */
 .msg-bot-bubble {
-  background: var(--stone-0);
-  border: 1px solid var(--border-default);
-  color: var(--text-primary);
-  border-radius: var(--radius-2xl) var(--radius-2xl) var(--radius-2xl) var(--radius-sm);
+  background: var(--clay-100);
+  color: var(--clay-800);
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs);
   font-family: var(--font-body);
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
   font-weight: 400;
-  line-height: 1.75;
-  box-shadow: var(--shadow-sm);
+  line-height: 1.6;
 }
 
 .msg-user-bubble {
-  background: var(--gradient-brand);
+  background: var(--forest-500);
   color: white;
-  border-radius: var(--radius-2xl) var(--radius-2xl) var(--radius-sm) var(--radius-2xl);
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-xs) var(--radius-lg);
   font-family: var(--font-body);
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 400;
   line-height: 1.4;
-  box-shadow: var(--shadow-teal);
+}
+
+/* ================================================================
+   FOCUS RING — Forest Teal
+   ================================================================ */
+
+.focus-ring:focus,
+.focus-ring:focus-visible {
+  outline: none;
+  border-color: var(--forest-500);
+  box-shadow: 0 0 0 3px rgba(45, 106, 90, 0.12);
 }
 
 /* ================================================================
@@ -297,9 +277,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes mic-pulse {
-  0%   { box-shadow: 0 0 0 0   rgba(20, 184, 166, 0.4); }
-  70%  { box-shadow: 0 0 0 22px rgba(20, 184, 166, 0); }
-  100% { box-shadow: 0 0 0 0   rgba(20, 184, 166, 0); }
+  0%   { box-shadow: 0 0 0 0   rgba(90, 122, 74, 0.4); }
+  70%  { box-shadow: 0 0 0 22px rgba(90, 122, 74, 0); }
+  100% { box-shadow: 0 0 0 0   rgba(90, 122, 74, 0); }
 }
 
 @keyframes cursor-blink {
@@ -313,8 +293,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes waveform-anim {
-  0%, 100% { height: 8px;  opacity: 0.35; }
-  50%      { height: 44px; opacity: 1;    }
+  0%, 100% { height: 5px;  opacity: 0.35; }
+  50%      { height: 20px; opacity: 1;    }
 }
 
 @keyframes pulse-dot {
@@ -328,9 +308,9 @@ h1, h2, h3, h4, h5, h6 {
   100% { transform: scale(1); opacity: 1; }
 }
 
-@keyframes toast-in {
-  from { opacity: 0; transform: translateY(14px) scale(0.94); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes voice-wave {
+  0%, 100% { height: 5px;  opacity: 0.35; }
+  50%      { height: 20px; opacity: 1;    }
 }
 
 /* Utility animation classes */
@@ -362,6 +342,15 @@ h1, h2, h3, h4, h5, h6 {
 .streaming-cursor::after {
   content: '▊';
   animation: cursor-blink 0.8s step-end infinite;
-  color: var(--teal-500);
+  color: var(--forest-500);
   margin-left: 1px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

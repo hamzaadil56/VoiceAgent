@@ -103,6 +103,46 @@ class FormsListResponse(BaseModel):
     forms: list[FormSummary]
 
 
+class DashboardDailyPoint(BaseModel):
+    date: str
+    count: int
+
+
+class DashboardFormAggregate(BaseModel):
+    form_id: str
+    title: str
+    slug: str
+    status: str
+    mode: str
+    submission_count: int
+
+
+class DashboardRecentSubmission(BaseModel):
+    submission_id: str
+    form_id: str
+    form_title: str
+    completed_at: str
+
+
+class OrgDashboardResponse(BaseModel):
+    """Org-wide response analytics for the admin workspace."""
+
+    total_submissions: int
+    total_sessions: int
+    completion_rate_pct: float
+    published_forms: int
+    draft_forms: int
+    submissions_last_7d: int
+    submissions_prev_7d: int
+    submissions_trend_pct: float | None
+    completion_rate_trend_pct: float | None
+    avg_completion_seconds: float | None
+    submissions_by_channel: dict[str, int]
+    daily_submissions: list[DashboardDailyPoint]
+    forms: list[DashboardFormAggregate]
+    recent_submissions: list[DashboardRecentSubmission]
+
+
 class FormDetailResponse(FormSummary):
     """Full form detail including fields schema."""
     pass

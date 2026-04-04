@@ -91,6 +91,45 @@ export interface SubmissionsResponse {
 	rows: SubmissionRow[];
 }
 
+// --- Org dashboard analytics ---
+export interface DashboardDailyPoint {
+	date: string;
+	count: number;
+}
+
+export interface DashboardFormAggregate {
+	form_id: string;
+	title: string;
+	slug: string;
+	status: string;
+	mode: string;
+	submission_count: number;
+}
+
+export interface DashboardRecentSubmission {
+	submission_id: string;
+	form_id: string;
+	form_title: string;
+	completed_at: string;
+}
+
+export interface OrgDashboardResponse {
+	total_submissions: number;
+	total_sessions: number;
+	completion_rate_pct: number;
+	published_forms: number;
+	draft_forms: number;
+	submissions_last_7d: number;
+	submissions_prev_7d: number;
+	submissions_trend_pct: number | null;
+	completion_rate_trend_pct: number | null;
+	avg_completion_seconds: number | null;
+	submissions_by_channel: Record<string, number>;
+	daily_submissions: DashboardDailyPoint[];
+	forms: DashboardFormAggregate[];
+	recent_submissions: DashboardRecentSubmission[];
+}
+
 export interface ExportResponse {
 	export_id: string;
 	status: string;

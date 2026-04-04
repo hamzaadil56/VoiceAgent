@@ -1,4 +1,3 @@
-/** Prompt-based form builder — Living Interface botanical theme */
 import { type Dispatch, type SetStateAction, useCallback } from "react";
 import type { FormField } from "../../../shared/types/api";
 
@@ -14,21 +13,6 @@ interface PromptFormBuilderProps {
 const FIELD_TYPES = [
 	"text", "email", "number", "phone", "url", "date", "select", "boolean",
 ] as const;
-
-const inputStyle: React.CSSProperties = {
-	background: "var(--stone-0)",
-	border: "1.5px solid var(--stone-200)",
-};
-
-const onFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-	e.currentTarget.style.borderColor = "var(--teal-400)";
-	e.currentTarget.style.boxShadow = "0 0 0 3px rgba(20,184,166,0.12)";
-};
-
-const onBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-	e.currentTarget.style.borderColor = "var(--stone-200)";
-	e.currentTarget.style.boxShadow = "none";
-};
 
 export function PromptFormBuilder({
 	prompt,
@@ -64,15 +48,12 @@ export function PromptFormBuilder({
 	return (
 		<div className="space-y-6">
 			{/* AI Prompt */}
-			<section
-				className="rounded-2xl p-6 space-y-4"
-				style={{ background: "var(--stone-0)", border: "1px solid var(--border-default)" }}
-			>
+			<section className="bg-bg-base rounded-lg border-[0.5px] border-stone-200 p-6 space-y-4">
 				<div>
-					<h2 className="font-body text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-1">
+					<h2 className="text-[11px] font-medium uppercase tracking-[0.06em] text-text-tertiary mb-1">
 						Describe Your Form
 					</h2>
-					<p className="font-body text-[13px] text-text-secondary">
+					<p className="text-[13px] text-text-secondary">
 						Tell the AI what information you want to collect. Be specific about field types and validation.
 					</p>
 				</div>
@@ -80,10 +61,7 @@ export function PromptFormBuilder({
 				<textarea
 					value={prompt}
 					onChange={(e) => onPromptChange(e.target.value)}
-					className="w-full px-4 py-[10px] rounded-lg font-body text-text-primary text-[15px] outline-none transition-all placeholder:text-text-muted resize-none"
-					style={inputStyle}
-					onFocus={onFocus}
-					onBlur={onBlur}
+					className="w-full px-3 py-[9px] rounded-md text-sm text-text-primary border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all placeholder:text-text-tertiary focus:border-forest-500 focus:shadow-forest-ring resize-none"
 					placeholder="Example: I want to collect leads for my real estate business. I need their full name, email address, phone number, budget range, preferred neighborhood, and when they're looking to buy."
 					rows={5}
 				/>
@@ -92,8 +70,7 @@ export function PromptFormBuilder({
 					type="button"
 					onClick={onGenerate}
 					disabled={isGenerating || prompt.trim().length < 10}
-					className="px-6 py-[10px] rounded-lg font-body font-semibold text-[13px] text-white transition-all duration-150 disabled:opacity-50 hover:opacity-90 flex items-center gap-2"
-					style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-teal)" }}
+					className="px-6 py-[9px] rounded-md font-medium text-[13px] text-white bg-forest-500 hover:bg-forest-600 transition-all duration-150 disabled:opacity-50 shadow-forest flex items-center gap-2"
 				>
 					{isGenerating ? (
 						<>
@@ -112,28 +89,20 @@ export function PromptFormBuilder({
 			</section>
 
 			{/* Fields */}
-			<section
-				className="rounded-2xl p-6 space-y-4"
-				style={{ background: "var(--stone-0)", border: "1px solid var(--border-default)" }}
-			>
+			<section className="bg-bg-base rounded-lg border-[0.5px] border-stone-200 p-6 space-y-4">
 				<div className="flex items-center justify-between">
 					<div>
-						<h2 className="font-body text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-1">
+						<h2 className="text-[11px] font-medium uppercase tracking-[0.06em] text-text-tertiary mb-1">
 							Form Fields
 						</h2>
-						<p className="font-body text-[13px] text-text-secondary">
+						<p className="text-[13px] text-text-secondary">
 							{fields.length} field{fields.length !== 1 ? "s" : ""} — edit or add more
 						</p>
 					</div>
 					<button
 						type="button"
 						onClick={addField}
-						className="px-3 py-[6px] font-body text-[13px] rounded-lg font-medium transition-all hover:opacity-80"
-						style={{
-							color: "var(--teal-700)",
-							border: "1px solid var(--border-teal)",
-							background: "var(--teal-50)",
-						}}
+						className="px-3 py-[6px] text-[13px] rounded-md font-medium text-forest-600 border-[0.5px] border-forest-200 bg-forest-50 hover:bg-forest-100 transition-all"
 					>
 						+ Add Field
 					</button>
@@ -141,7 +110,7 @@ export function PromptFormBuilder({
 
 				{fields.length === 0 ? (
 					<div className="text-center py-8">
-						<p className="font-body text-text-muted text-[13px]">
+						<p className="text-text-tertiary text-[13px]">
 							No fields yet. Use AI generation above or add fields manually.
 						</p>
 					</div>
@@ -174,26 +143,19 @@ interface FieldCardProps {
 
 function FieldCard({ field, index, totalFields, onUpdate, onRemove }: FieldCardProps) {
 	return (
-		<div
-			className="rounded-xl p-4 space-y-3 group"
-			style={{ background: "var(--stone-50)", border: "1px solid var(--border-subtle)" }}
-		>
+		<div className="bg-stone-50 rounded-md border-[0.5px] border-stone-100 p-4 space-y-3 group">
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2">
-					<span
-						className="font-mono text-[11px] px-2 py-0.5 rounded"
-						style={{ background: "var(--stone-100)", color: "var(--text-muted)" }}
-					>
+					<span className="font-mono text-[11px] px-2 py-0.5 rounded bg-stone-100 text-text-tertiary">
 						#{index + 1}
 					</span>
-					<span className="font-mono text-[11px] text-text-muted">{field.name}</span>
+					<span className="font-mono text-[11px] text-text-tertiary">{field.name}</span>
 				</div>
 				{totalFields > 1 && (
 					<button
 						type="button"
 						onClick={onRemove}
-						className="px-1.5 py-0.5 font-body text-[11px] opacity-0 group-hover:opacity-100 transition-opacity"
-						style={{ color: "var(--color-error)" }}
+						className="px-1.5 py-0.5 text-[11px] text-error opacity-0 group-hover:opacity-100 transition-opacity"
 					>
 						Remove
 					</button>
@@ -202,19 +164,13 @@ function FieldCard({ field, index, totalFields, onUpdate, onRemove }: FieldCardP
 
 			<div className="grid grid-cols-1 md:grid-cols-4 gap-3">
 				<input
-					className="px-3 py-2 rounded-lg font-mono text-[13px] text-text-primary outline-none transition-all"
-					style={inputStyle}
-					onFocus={onFocus}
-					onBlur={onBlur}
+					className="px-3 py-2 rounded-md font-mono text-[13px] text-text-primary border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all focus:border-forest-500 focus:shadow-forest-ring"
 					value={field.name}
 					onChange={(e) => onUpdate({ name: e.target.value.replace(/\s+/g, "_").toLowerCase() })}
 					placeholder="field_name"
 				/>
 				<input
-					className="md:col-span-3 px-3 py-2 rounded-lg font-body text-[13px] text-text-primary outline-none transition-all"
-					style={inputStyle}
-					onFocus={onFocus}
-					onBlur={onBlur}
+					className="md:col-span-3 px-3 py-2 rounded-md text-[13px] text-text-primary border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all focus:border-forest-500 focus:shadow-forest-ring"
 					value={field.description}
 					onChange={(e) => onUpdate({ description: e.target.value })}
 					placeholder="Field description..."
@@ -223,10 +179,7 @@ function FieldCard({ field, index, totalFields, onUpdate, onRemove }: FieldCardP
 
 			<div className="flex flex-wrap gap-3 items-center">
 				<select
-					className="px-3 py-2 rounded-lg font-body text-[13px] text-text-primary outline-none transition-all"
-					style={inputStyle}
-					onFocus={onFocus}
-					onBlur={onBlur}
+					className="px-3 py-2 rounded-md text-[13px] text-text-primary border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all focus:border-forest-500 focus:shadow-forest-ring"
 					value={field.type}
 					onChange={(e) => onUpdate({ type: e.target.value as FormField["type"] })}
 				>
@@ -235,13 +188,12 @@ function FieldCard({ field, index, totalFields, onUpdate, onRemove }: FieldCardP
 					))}
 				</select>
 
-				<label className="flex items-center gap-2 font-body text-[13px] text-text-secondary cursor-pointer">
+				<label className="flex items-center gap-2 text-[13px] text-text-secondary cursor-pointer">
 					<input
 						type="checkbox"
 						checked={field.required}
 						onChange={(e) => onUpdate({ required: e.target.checked })}
-						className="rounded"
-						style={{ accentColor: "var(--teal-500)" }}
+						className="rounded accent-forest-500"
 					/>
 					Required
 				</label>

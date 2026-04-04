@@ -1,6 +1,3 @@
-"""Agent module using OpenAI Agents SDK."""
+"""Optional standalone agents (legacy hooks)."""
 
-from .voice_assistant_agent import VoiceAssistantAgent
-
-__all__ = ["VoiceAssistantAgent"]
-
+__all__: list[str] = []

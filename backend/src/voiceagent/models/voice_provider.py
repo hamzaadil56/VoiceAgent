@@ -1,57 +1,40 @@
-"""Custom Voice Model Provider for Groq STT and Orpheus TTS."""
+"""Voice model provider: Groq STT + Groq PlayAI TTS."""
 
 from agents.voice import VoiceModelProvider, STTModel, TTSModel
+
 from .groq_stt import GroqSTTModel
-from .orpheus_tts import OrpheusTTSModel
+from .groq_tts import GroqTTSModel
 
 
-class CustomVoiceModelProvider(VoiceModelProvider):
-    """Voice model provider that uses Groq for STT and Orpheus TTS via LM Studio."""
+class GroqVoiceModelProvider(VoiceModelProvider):
+    """Maps SDK voice model names to Groq STT and Groq TTS implementations."""
 
     def __init__(
         self,
         groq_api_key: str,
-        lm_studio_url: str,
         stt_model: str = "whisper-large-v3",
-        tts_voice: str = "tara",
+        tts_model: str = "playai-tts",
+        tts_voice: str = "Fritz-PlayAI",
+        *,
+        tts_base_url: str = "https://api.groq.com/openai/v1",
     ):
-        """
-        Initialize the custom voice model provider.
-
-        Args:
-            groq_api_key: Groq API key for STT
-            lm_studio_url: LM Studio server URL (required, must be provided from settings)
-            stt_model: STT model name
-            tts_voice: Voice for Orpheus TTS
-        """
-
         self.groq_api_key = groq_api_key
         self.stt_model_name = stt_model
-
-        # Create instances
+        self.tts_model_name = tts_model
         self._stt = GroqSTTModel(api_key=groq_api_key, model=stt_model)
-        self._tts = OrpheusTTSModel(base_url=lm_studio_url, voice=tts_voice)
+        self._tts = GroqTTSModel(
+            api_key=groq_api_key,
+            model=tts_model,
+            voice=tts_voice,
+            base_url=tts_base_url,
+        )
 
     def get_stt_model(self, model_name: str | None) -> STTModel:
-        """
-        Get the speech-to-text model.
-
-        Args:
-            model_name: Model name (ignored, uses configured model)
-
-        Returns:
-            The Groq STT model
-        """
         return self._stt
 
     def get_tts_model(self, model_name: str | None) -> TTSModel:
-        """
-        Get the text-to-speech model.
-
-        Args:
-            model_name: Model name (ignored, uses Orpheus TTS)
-
-        Returns:
-            The Orpheus TTS model
-        """
         return self._tts
+
+
+# Backward-compatible alias
+CustomVoiceModelProvider = GroqVoiceModelProvider

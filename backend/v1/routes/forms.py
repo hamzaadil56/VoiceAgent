@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import Date, cast, extract, func, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -13,9 +15,13 @@ from ..models import (
     Answer,
     AuditLog,
     Form,
+    RespondentSession,
     Submission,
 )
 from ..schemas import (
+    DashboardDailyPoint,
+    DashboardFormAggregate,
+    DashboardRecentSubmission,
     ExportCreateResponse,
     FormCreateRequest,
     FormCreateResponse,
@@ -26,6 +32,7 @@ from ..schemas import (
     FormSummary,
     FormsListResponse,
     FormUpdateRequest,
+    OrgDashboardResponse,
     PublishResponse,
     SubmissionRow,
     SubmissionsResponse,
@@ -111,6 +118,264 @@ def list_forms(
     ).scalars().all()
 
     return FormsListResponse(forms=[_form_to_summary(f) for f in forms])
+
+
+# ---------------------------------------------------------------------------
+# Org dashboard (aggregated response analytics)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/orgs/{org_id}/dashboard", response_model=OrgDashboardResponse)
+def org_dashboard(
+    org_id: str,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_admin),
+):
+    require_org_membership(org_id, current_user, db)
+    forms = db.execute(
+        select(Form).where(Form.org_id == org_id).order_by(Form.updated_at.desc())
+    ).scalars().all()
+
+    published_forms = sum(1 for f in forms if f.status == "published")
+    draft_forms = sum(1 for f in forms if f.status == "draft")
+
+    form_ids = [f.id for f in forms]
+    if not form_ids:
+        start_day = date.today() - timedelta(days=13)
+        empty_daily: list[DashboardDailyPoint] = []
+        d0 = start_day
+        end_day = date.today()
+        while d0 <= end_day:
+            empty_daily.append(DashboardDailyPoint(date=d0.isoformat(), count=0))
+            d0 += timedelta(days=1)
+        return OrgDashboardResponse(
+            total_submissions=0,
+            total_sessions=0,
+            completion_rate_pct=0.0,
+            published_forms=published_forms,
+            draft_forms=draft_forms,
+            submissions_last_7d=0,
+            submissions_prev_7d=0,
+            submissions_trend_pct=None,
+            completion_rate_trend_pct=None,
+            avg_completion_seconds=None,
+            submissions_by_channel={},
+            daily_submissions=empty_daily,
+            forms=[],
+            recent_submissions=[],
+        )
+
+    total_submissions = db.scalar(
+        select(func.count()).select_from(Submission).where(Submission.form_id.in_(form_ids))
+    )
+    total_submissions = int(total_submissions or 0)
+
+    total_sessions = db.scalar(
+        select(func.count())
+        .select_from(RespondentSession)
+        .where(RespondentSession.form_id.in_(form_ids))
+    )
+    total_sessions = int(total_sessions or 0)
+
+    completion_rate_pct = round(100.0 * total_submissions / total_sessions, 1) if total_sessions else 0.0
+
+    now = datetime.utcnow()
+    boundary_7d = now - timedelta(days=7)
+    boundary_14d = now - timedelta(days=14)
+
+    submissions_last_7d = int(
+        db.scalar(
+            select(func.count())
+            .select_from(Submission)
+            .where(
+                Submission.form_id.in_(form_ids),
+                Submission.completed_at >= boundary_7d,
+            )
+        )
+        or 0
+    )
+
+    submissions_prev_7d = int(
+        db.scalar(
+            select(func.count())
+            .select_from(Submission)
+            .where(
+                Submission.form_id.in_(form_ids),
+                Submission.completed_at >= boundary_14d,
+                Submission.completed_at < boundary_7d,
+            )
+        )
+        or 0
+    )
+
+    if submissions_prev_7d > 0:
+        submissions_trend_pct = round(
+            100.0 * (submissions_last_7d - submissions_prev_7d) / submissions_prev_7d,
+            1,
+        )
+    elif submissions_last_7d > 0:
+        submissions_trend_pct = 100.0
+    else:
+        submissions_trend_pct = None
+
+    completed_prev = int(
+        db.scalar(
+            select(func.count())
+            .select_from(Submission)
+            .join(RespondentSession, RespondentSession.id == Submission.session_id)
+            .where(
+                Submission.form_id.in_(form_ids),
+                Submission.completed_at >= boundary_14d,
+                Submission.completed_at < boundary_7d,
+            )
+        )
+        or 0
+    )
+    sessions_prev = int(
+        db.scalar(
+            select(func.count())
+            .select_from(RespondentSession)
+            .where(
+                RespondentSession.form_id.in_(form_ids),
+                RespondentSession.created_at < boundary_7d,
+                RespondentSession.created_at >= boundary_14d,
+            )
+        )
+        or 0
+    )
+    rate_prev = round(100.0 * completed_prev / sessions_prev, 1) if sessions_prev else 0.0
+
+    completed_last = int(
+        db.scalar(
+            select(func.count())
+            .select_from(Submission)
+            .join(RespondentSession, RespondentSession.id == Submission.session_id)
+            .where(
+                Submission.form_id.in_(form_ids),
+                Submission.completed_at >= boundary_7d,
+            )
+        )
+        or 0
+    )
+    sessions_last = int(
+        db.scalar(
+            select(func.count())
+            .select_from(RespondentSession)
+            .where(
+                RespondentSession.form_id.in_(form_ids),
+                RespondentSession.created_at >= boundary_7d,
+            )
+        )
+        or 0
+    )
+    rate_last = round(100.0 * completed_last / sessions_last, 1) if sessions_last else 0.0
+
+    if sessions_prev > 0 or sessions_last > 0:
+        completion_rate_trend_pct = round(rate_last - rate_prev, 1)
+    else:
+        completion_rate_trend_pct = None
+
+    avg_raw = db.scalar(
+        select(
+            func.avg(
+                extract("epoch", Submission.completed_at)
+                - extract("epoch", RespondentSession.created_at)
+            )
+        )
+        .select_from(Submission)
+        .join(RespondentSession, RespondentSession.id == Submission.session_id)
+        .where(Submission.form_id.in_(form_ids))
+    )
+    avg_completion_seconds = float(avg_raw) if avg_raw is not None else None
+
+    channel_rows = db.execute(
+        select(RespondentSession.channel, func.count())
+        .select_from(Submission)
+        .join(RespondentSession, RespondentSession.id == Submission.session_id)
+        .where(Submission.form_id.in_(form_ids))
+        .group_by(RespondentSession.channel)
+    ).all()
+    submissions_by_channel = {str(ch): int(cnt) for ch, cnt in channel_rows}
+
+    start_day = date.today() - timedelta(days=13)
+    start_dt = datetime.combine(start_day, datetime.min.time())
+    day_col = cast(Submission.completed_at, Date)
+    daily_rows = db.execute(
+        select(day_col, func.count())
+        .where(
+            Submission.form_id.in_(form_ids),
+            Submission.completed_at >= start_dt,
+        )
+        .group_by(day_col)
+        .order_by(day_col)
+    ).all()
+    daily_map: dict[str, int] = {}
+    for d, cnt in daily_rows:
+        key = d.isoformat() if hasattr(d, "isoformat") else str(d)
+        daily_map[key] = int(cnt)
+
+    daily_submissions: list[DashboardDailyPoint] = []
+    d = start_day
+    end_day = date.today()
+    while d <= end_day:
+        key = d.isoformat()
+        daily_submissions.append(DashboardDailyPoint(date=key, count=daily_map.get(key, 0)))
+        d += timedelta(days=1)
+
+    count_rows = db.execute(
+        select(Submission.form_id, func.count())
+        .where(Submission.form_id.in_(form_ids))
+        .group_by(Submission.form_id)
+    ).all()
+    sub_counts = {fid: int(c) for fid, c in count_rows}
+
+    form_aggregates = [
+        DashboardFormAggregate(
+            form_id=f.id,
+            title=f.title,
+            slug=f.slug,
+            status=f.status,
+            mode=f.mode,
+            submission_count=sub_counts.get(f.id, 0),
+        )
+        for f in forms
+    ]
+    form_aggregates.sort(key=lambda x: (-x.submission_count, x.title))
+
+    recent_rows = db.execute(
+        select(Submission, Form.title)
+        .join(Form, Form.id == Submission.form_id)
+        .where(Form.org_id == org_id)
+        .order_by(Submission.completed_at.desc())
+        .limit(15)
+    ).all()
+
+    recent_submissions = [
+        DashboardRecentSubmission(
+            submission_id=sub.id,
+            form_id=sub.form_id,
+            form_title=title,
+            completed_at=sub.completed_at.isoformat(),
+        )
+        for sub, title in recent_rows
+    ]
+
+    return OrgDashboardResponse(
+        total_submissions=total_submissions,
+        total_sessions=total_sessions,
+        completion_rate_pct=completion_rate_pct,
+        published_forms=published_forms,
+        draft_forms=draft_forms,
+        submissions_last_7d=submissions_last_7d,
+        submissions_prev_7d=submissions_prev_7d,
+        submissions_trend_pct=submissions_trend_pct,
+        completion_rate_trend_pct=completion_rate_trend_pct,
+        avg_completion_seconds=avg_completion_seconds,
+        submissions_by_channel=submissions_by_channel,
+        daily_submissions=daily_submissions,
+        forms=form_aggregates,
+        recent_submissions=recent_submissions,
+    )
 
 
 # ---------------------------------------------------------------------------

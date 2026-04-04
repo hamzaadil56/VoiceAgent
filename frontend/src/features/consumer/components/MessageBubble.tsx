@@ -1,4 +1,3 @@
-/** Chat message bubble — Living Interface botanical theme */
 import type { ChatMessage } from "../../../shared/types/api";
 
 interface MessageBubbleProps {
@@ -11,18 +10,12 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
 
 	if (isBot) {
 		return (
-			<div className="flex gap-3 items-end max-w-[88%] self-start animate-bubble-left">
-				{/* Lavender bot avatar — AI identity color */}
-				<div
-					className="w-8 h-8 rounded-full flex-shrink-0 grid place-items-center text-white text-[13px] font-bold"
-					style={{
-						background: "var(--gradient-brand)",
-						boxShadow: "0 2px 8px rgba(20,184,166,0.3)",
-					}}
-				>
-					A
+			<div className="flex gap-2 items-end max-w-[85%] self-start animate-bubble-left">
+				{/* Fired clay agent avatar */}
+				<div className="w-7 h-7 rounded-full flex-shrink-0 grid place-items-center text-white text-[11px] font-medium bg-clay-500">
+					AF
 				</div>
-				<div className="msg-bot-bubble px-5 py-4">
+				<div className="msg-bot-bubble px-3.5 py-2.5">
 					<p className={`whitespace-pre-wrap${isStreaming ? " streaming-cursor" : ""}`}>
 						{message.content}
 					</p>
@@ -32,8 +25,8 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
 	}
 
 	return (
-		<div className="flex justify-end max-w-[88%] self-end animate-bubble-right">
-			<div className="msg-user-bubble px-5 py-3">
+		<div className="flex justify-end max-w-[85%] self-end animate-bubble-right">
+			<div className="msg-user-bubble px-3.5 py-2.5">
 				<p className="whitespace-pre-wrap">{message.content}</p>
 			</div>
 		</div>
@@ -42,37 +35,25 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
 
 export function TypingIndicator() {
 	return (
-		<div className="flex gap-3 items-end max-w-[88%] self-start animate-bubble-left">
-			<div
-				className="w-8 h-8 rounded-full flex-shrink-0 grid place-items-center text-white text-[13px] font-bold"
-				style={{
-					background: "var(--gradient-brand)",
-					boxShadow: "0 2px 8px rgba(20,184,166,0.3)",
-				}}
-			>
-				A
+		<div className="flex gap-2 items-end max-w-[85%] self-start animate-bubble-left">
+			<div className="w-7 h-7 rounded-full flex-shrink-0 grid place-items-center text-white text-[11px] font-medium bg-clay-500">
+				AF
 			</div>
 			<div
-				className="flex gap-[5px] items-center px-5 py-4"
-				style={{
-					background: "var(--stone-0)",
-					border: "1px solid var(--border-default)",
-					borderRadius: "var(--radius-2xl) var(--radius-2xl) var(--radius-2xl) var(--radius-sm)",
-					boxShadow: "var(--shadow-xs)",
-				}}
+				className="flex gap-[5px] items-center px-3.5 py-3 bg-clay-100 rounded-lg"
+				style={{ borderBottomLeftRadius: "var(--radius-xs)" }}
 			>
-				{/* Tri-color typing dots: teal → lavender → sage */}
 				<span
-					className="w-[7px] h-[7px] rounded-full"
-					style={{ background: "var(--teal-400)", animation: "typing-bounce 1.5s infinite ease-in-out" }}
+					className="w-[7px] h-[7px] rounded-full bg-clay-300"
+					style={{ animation: "typing-bounce 1.5s infinite ease-in-out" }}
 				/>
 				<span
-					className="w-[7px] h-[7px] rounded-full"
-					style={{ background: "var(--lavender-400)", animation: "typing-bounce 1.5s infinite ease-in-out 0.18s" }}
+					className="w-[7px] h-[7px] rounded-full bg-clay-300"
+					style={{ animation: "typing-bounce 1.5s infinite ease-in-out 0.18s" }}
 				/>
 				<span
-					className="w-[7px] h-[7px] rounded-full"
-					style={{ background: "var(--sage-400)", animation: "typing-bounce 1.5s infinite ease-in-out 0.36s" }}
+					className="w-[7px] h-[7px] rounded-full bg-clay-300"
+					style={{ animation: "typing-bounce 1.5s infinite ease-in-out 0.36s" }}
 				/>
 			</div>
 		</div>

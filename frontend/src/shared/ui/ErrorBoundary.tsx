@@ -1,4 +1,3 @@
-/** Error boundary for catching render errors — Living Interface botanical theme */
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 interface Props {
@@ -31,43 +30,25 @@ export class ErrorBoundary extends Component<Props, State> {
 				return this.props.fallback;
 			}
 			return (
-				<div
-					className="min-h-screen flex items-center justify-center p-4"
-					style={{ background: "var(--mesh-bg)" }}
-				>
-					<div
-						className="rounded-2xl p-8 max-w-lg w-full text-center"
-						style={{
-							background: "rgba(255,255,255,0.85)",
-							border: "1px solid rgba(255,255,255,0.9)",
-							boxShadow: "var(--shadow-xl)",
-							backdropFilter: "blur(20px)",
-						}}
-					>
-						<div
-							className="w-14 h-14 rounded-2xl grid place-items-center mx-auto mb-4 text-[24px]"
-							style={{ background: "var(--stone-50)", border: "1.5px solid var(--stone-200)" }}
-						>
+				<div className="min-h-screen flex items-center justify-center p-4 bg-bg-page">
+					<div className="bg-bg-base rounded-xl border-[0.5px] border-stone-200 p-8 max-w-lg w-full text-center shadow-xl">
+						<div className="w-12 h-12 bg-stone-50 border border-stone-200 rounded-lg grid place-items-center mx-auto mb-4 text-[24px]">
 							⚠️
 						</div>
-						<h2 className="font-display font-bold text-[26px] text-text-primary mb-2 tracking-tight">
+						<h2 className="font-heading font-semibold text-[22px] text-text-primary mb-2">
 							Something went wrong
 						</h2>
-						<p className="font-body text-[13px] text-text-secondary mb-4 leading-relaxed">
+						<p className="text-[13px] text-text-secondary mb-4 leading-relaxed">
 							An unexpected error occurred. Please try refreshing the page.
 						</p>
 						{this.state.error && (
-							<p
-								className="font-mono text-[12px] rounded-xl p-3 mb-4 text-left break-all"
-								style={{ color: "var(--color-error)", background: "var(--error-bg)" }}
-							>
+							<p className="font-mono text-[12px] rounded-md p-3 mb-4 text-left break-all text-error bg-[var(--error-bg)]">
 								{this.state.error.message}
 							</p>
 						)}
 						<button
 							onClick={() => window.location.reload()}
-							className="px-5 py-[9px] rounded-lg font-body font-semibold text-[13px] text-white transition-all hover:opacity-90"
-							style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-teal)" }}
+							className="px-5 py-[9px] rounded-md bg-forest-500 text-white text-[14px] font-medium transition-all hover:bg-forest-600"
 						>
 							Refresh Page
 						</button>

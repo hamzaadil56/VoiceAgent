@@ -4,13 +4,13 @@ import Settings from "../../../components/Settings";
 
 export default function LegacyVoicePage() {
 	return (
-		<div className="min-h-screen relative z-10">
+		<div className="min-h-screen relative z-10 bg-bg-page">
 			<div className="container mx-auto px-4 py-8 relative z-10">
-				<Link to="/" className="text-sm text-text-tertiary hover:text-accent-primary mb-4 inline-block">
+				<Link to="/" className="text-sm text-text-tertiary hover:text-forest-500 mb-4 inline-block transition-colors">
 					&larr; Back to Home
 				</Link>
 				<header className="mb-12 text-center">
-					<h1 className="text-6xl font-heading font-bold mb-3 bg-gradient-to-r from-accent-primary via-accent-secondary to-accent-primary bg-clip-text text-transparent">
+					<h1 className="text-5xl font-heading font-semibold mb-3 text-text-primary">
 						Voice Agent (Legacy)
 					</h1>
 				</header>

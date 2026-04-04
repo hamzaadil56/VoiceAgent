@@ -1,7 +1,7 @@
 """Agentic Forms engine using OpenAI Agents SDK with function calling.
 
-Uses openai/gpt-4o-mini via OpenRouter for natural conversation
-and the save_answer tool to persist form data. Requires OPEN_ROUTER_API_KEY.
+Uses Groq Llama via LiteLLM for natural conversation and the save_answer tool
+to persist form data. Requires GROQ_API_KEY.
 """
 
 from __future__ import annotations
@@ -24,13 +24,9 @@ from ..models import Answer, Form, Message, RespondentSession, Submission
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 set_tracing_disabled(True)
 
-# LiteLLM expects OPENROUTER_API_KEY; bridge from OPEN_ROUTER_API_KEY
-if os.getenv("OPEN_ROUTER_API_KEY") and not os.getenv("OPENROUTER_API_KEY"):
-    os.environ["OPENROUTER_API_KEY"] = os.getenv("OPEN_ROUTER_API_KEY", "")
-
 logger = logging.getLogger(__name__)
 
-MODEL = "openrouter/openai/gpt-4o-mini"
+MODEL = "groq/llama-3.3-70b-versatile"
 
 
 def _supports_function_calling() -> bool:
@@ -50,23 +46,45 @@ class FormSessionContext:
     respondent_session: RespondentSession
     form: Form
     collected_answers: dict[str, str] = field(default_factory=dict)
+    #: At most one successful save_answer per Runner / voice workflow run.
+    save_answer_called: bool = False
 
 
 # ---------------------------------------------------------------------------
-# Tool
+# Tool – answer validation
 # ---------------------------------------------------------------------------
 
-def _is_placeholder_value(value: str) -> bool:
-    """True if value looks like a placeholder (e.g. [user's full name]) and must not be saved."""
+POLITE_FILLERS = frozenset({
+    "thank you", "thanks", "thank you so much", "thanks a lot",
+    "got it", "okay", "ok", "sure", "alright", "great", "perfect",
+    "wonderful", "excellent", "nice", "good", "yes", "no", "yeah",
+    "yep", "nope", "right", "cool", "sounds good", "that's great",
+    "that's fine", "that sounds good", "hi", "hello", "hey", "bye",
+    "goodbye", "go ahead", "please", "of course", "absolutely",
+    "mm-hmm", "uh-huh", "you're welcome", "no problem",
+})
+
+
+def _is_invalid_answer_value(value: str) -> str | None:
+    """Return an error string if *value* must not be persisted, else None."""
     if not value or not value.strip():
-        return True
+        return "Value is empty."
     v = value.strip()
-    if "[user's " in v.lower() or "[user’s " in v.lower():
-        return True
-    if v.startswith("[") and v.endswith("]") and "user" in v.lower():
-        return True
-    return False
+    vl = v.lower()
+    if "[user" in vl and "]" in vl:
+        return "Do not save placeholder text like [user's ...]. Save the actual words the user said."
+    normalised = vl.rstrip(".!?,;:")
+    if normalised in POLITE_FILLERS:
+        return (
+            f"'{v}' is a polite filler, NOT the user's real answer. "
+            "Do NOT save it. Re-ask the question and wait for their actual answer."
+        )
+    return None
 
+
+# ---------------------------------------------------------------------------
+# Tool – save_answer
+# ---------------------------------------------------------------------------
 
 @function_tool
 def save_answer(
@@ -74,23 +92,39 @@ def save_answer(
     field_name: str,
     value: str,
 ) -> str:
-    """Save the user's answer for a form field. Call this when the user has provided an answer. After saving, ask for the next required field or thank them if all are collected.
+    """Save the user's ACTUAL spoken answer for a form field.
+
+    CRITICAL RULES — read before every call:
+    - value MUST contain the exact words the USER said, never your own words.
+    - Do NOT pass polite phrases like "Thank you", "Sure", "Okay", "Great" as the value.
+    - If the user only said a polite filler without giving a real answer, do NOT call
+      this tool at all. Instead acknowledge them politely and re-ask the question.
 
     Args:
         field_name: Exact field name from the form schema (e.g. dining_experience, food_quality_rating).
-        value: The value the user provided (string; for booleans use 'true' or 'false').
+        value: The user's actual spoken answer (string; for booleans use 'true' or 'false').
     """
     fctx: FormSessionContext = ctx.context
     db = fctx.db
     session_obj = fctx.respondent_session
     form = fctx.form
 
+    logger.debug("save_answer called: field=%s value=%r", field_name, value)
+
+    if fctx.save_answer_called:
+        return (
+            "Error: Only one save_answer is allowed per user turn. "
+            "Do not call save_answer again. Respond with the next question only."
+        )
+
     valid_fields = {f["name"] for f in (form.fields_schema or [])}
     if valid_fields and field_name not in valid_fields:
         return f"Error: '{field_name}' is not a valid field. Valid: {', '.join(sorted(valid_fields))}"
 
-    if _is_placeholder_value(value):
-        return f"Error: Do not save placeholder text like [user's ...]. Only save the actual words the user said. Ask the user to repeat their answer."
+    rejection = _is_invalid_answer_value(value)
+    if rejection:
+        logger.warning("save_answer REJECTED: field=%s value=%r reason=%s", field_name, value, rejection)
+        return f"Error: {rejection}"
 
     existing = db.execute(
         select(Answer).where(
@@ -112,6 +146,9 @@ def save_answer(
         )
     db.flush()
     fctx.collected_answers[field_name] = value.strip()
+    fctx.save_answer_called = True
+
+    logger.info("save_answer SAVED: field=%s value=%r", field_name, value.strip())
 
     fields_schema = form.fields_schema or []
     required = [f["name"] for f in fields_schema if f.get("required", True)]
@@ -158,8 +195,33 @@ def _build_instructions(
     voice_note = ""
     if voice_mode:
         voice_note = """
-## Voice mode
-You are the interviewer. The user will speak their answers. Your job is ONLY to ask the form questions one at a time and record their spoken answers with save_answer. Never answer the form questions yourself. Treat each user utterance as their answer (or clarification) and either save it or ask the next question."""
+## Voice mode — CRITICAL instructions
+You are conducting a voice interview. The user speaks their answers aloud ONE AT A TIME.
+
+STRICT RULES — follow these exactly, every single turn:
+
+1. Each call to your run() handles EXACTLY ONE user utterance. You MUST call save_answer
+   at most ONCE per run. Never call save_answer more than once in the same response.
+
+2. After calling save_answer, you get one more turn to respond with a brief acknowledgment
+   and ONLY the next unanswered question. That is all you do.
+
+3. NEVER answer questions on behalf of the user. NEVER infer, guess, or extrapolate
+   answers to questions you have not yet asked. Only save what the user literally said.
+
+4. NEVER use conversation history to pre-fill or overwrite answers. Each utterance is
+   independent. Save only what the CURRENT user message contains.
+
+5. If the user's message is ONLY a polite filler (e.g. "Thank you", "Okay", "Sure",
+   "Yeah") with NO answer content, do NOT call save_answer. Acknowledge briefly
+   and re-ask the same question.
+
+6. Extract the SUBSTANTIVE content from the user's words:
+   - User says "My name is Hamza Adil" -> save_answer(field_name="full_name", value="Hamza Adil")
+   - User says "I play on PC" -> save_answer(field_name="gaming_platform", value="PC")
+   - User says "About monthly" -> save_answer(field_name="play_frequency", value="monthly")
+
+7. NEVER pass your own words as the value. NEVER pass greetings or acknowledgments."""
 
     return f"""You are a conversational form assistant. Persona: {persona}
 {voice_note}
@@ -174,10 +236,12 @@ You are the interviewer. The user will speak their answers. Your job is ONLY to 
 {fields_desc or "No schema."}
 {progress}
 ## Rules
-1. Ask one question at a time. When the user answers, call save_answer with the field name and their value, then respond naturally and ask the next question.
-2. Only save answers the user explicitly gave. Do not guess or infer.
+1. Ask one question at a time. When the user answers, call save_answer ONCE with the field name and the user's ACTUAL words as the value, then respond briefly and ask the next unanswered question.
+2. Only save answers the user explicitly gave. Do not guess, infer, or fill in answers from context or prior turns.
 3. When save_answer says all required fields are collected, thank the user and say goodbye.
-4. Keep replies short (1–2 sentences)."""
+4. Keep replies short (1-2 sentences).
+5. If the user says something like "Thank you" or "Okay" without answering the question, do NOT call save_answer. Simply acknowledge and re-ask the same question.
+6. NEVER call save_answer more than once per response. NEVER pre-answer future questions."""
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +249,7 @@ You are the interviewer. The user will speak their answers. Your job is ONLY to 
 # ---------------------------------------------------------------------------
 
 def _get_llm() -> LitellmModel:
-    api_key = os.getenv("OPEN_ROUTER_API_KEY", "") or os.getenv("OPENROUTER_API_KEY", "")
+    api_key = os.getenv("GROQ_API_KEY", "")
     return LitellmModel(model=MODEL, api_key=api_key)
 
 
@@ -201,7 +265,7 @@ def build_form_agent(
         name=f"FormAgent-{form.slug}",
         instructions=instructions,
         model=_get_llm(),
-        model_settings=ModelSettings(temperature=0.7, max_tokens=500, parallel_tool_calls=False),
+        model_settings=ModelSettings(temperature=0.4, max_tokens=500, parallel_tool_calls=False),
         tools=[save_answer],
     )
 
@@ -279,7 +343,6 @@ async def process_agent_message(
     import asyncio
 
     assistant_message = None
-    last_error = None
     for attempt in range(3):
         try:
             result = await Runner.run(
@@ -291,7 +354,6 @@ async def process_agent_message(
             assistant_message = str(result.final_output).strip() if result.final_output else "Could you repeat that?"
             break
         except Exception as exc:
-            last_error = exc
             err = str(exc).lower()
             if any(x in err for x in ("tool_use_failed", "rate_limit", "429", "timeout")):
                 logger.warning("Agent attempt %d failed (retrying): %s", attempt + 1, exc)
@@ -376,8 +438,6 @@ async def stream_agent_message(
         async for event in result.stream_events():
             if isinstance(event, RawResponsesStreamEvent):
                 data = event.data
-                # Only stream text output deltas — skip function_call_arguments.delta
-                # which contains raw JSON tool-call args and should never be shown to users.
                 event_type = getattr(data, "type", "")
                 if event_type == "response.output_text.delta":
                     delta = getattr(data, "delta", "")
@@ -388,8 +448,6 @@ async def stream_agent_message(
         final = await result.get_final_result()
         final_output = str(final.final_output).strip() if final.final_output else ""
 
-        # If nothing was streamed (e.g. model only made tool calls with no text turn),
-        # fall back to sending the final_output in one shot.
         if not streamed_text and final_output:
             streamed_text = final_output
             yield "delta", {"content": final_output}
@@ -404,8 +462,6 @@ async def stream_agent_message(
         streamed_text = "Could you repeat that?"
         yield "delta", {"content": streamed_text}
 
-    # Use final_output for persistence when available — it's the authoritative
-    # clean message from the Runner (no tool-call artefacts).
     saved_message = final_output or streamed_text
 
     db.add(Message(session_id=respondent_session.id, role="assistant", content=saved_message))
@@ -428,7 +484,7 @@ async def generate_initial_greeting(db: Session, respondent_session: RespondentS
         instructions=instructions,
         model=_get_llm(),
         model_settings=ModelSettings(temperature=0.7, max_tokens=300),
-        tools=[],  # no tools for greeting
+        tools=[],
     )
 
     import asyncio
@@ -438,7 +494,7 @@ async def generate_initial_greeting(db: Session, respondent_session: RespondentS
         try:
             result = await Runner.run(
                 starting_agent=greeting_agent,
-                input="Generate a short, friendly greeting for someone starting this form. Mention what you'll ask about. 2–3 sentences. No tools.",
+                input="Generate a short, friendly greeting for someone starting this form. Mention what you'll ask about. 2-3 sentences. No tools.",
                 max_turns=1,
             )
             greeting = str(result.final_output).strip() if result.final_output else None
@@ -449,7 +505,7 @@ async def generate_initial_greeting(db: Session, respondent_session: RespondentS
             await asyncio.sleep(0.5 * (attempt + 1))
 
     if not greeting:
-        greeting = f"Hi! Welcome to {form.title}. I'll ask you a few questions—let's get started!"
+        greeting = f"Hi! Welcome to {form.title}. I'll ask you a few questions - let's get started!"
 
     db.add(Message(session_id=respondent_session.id, role="assistant", content=greeting))
     db.flush()

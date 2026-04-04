@@ -2,9 +2,8 @@
 # Build from repo root:  docker build -f backend/Dockerfile .
 FROM python:3.12-slim-bookworm
 
-# Install system deps for audio (sounddevice/portaudio)
+# ffmpeg: WebM → WAV for browser mic audio
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libportaudio2 \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 

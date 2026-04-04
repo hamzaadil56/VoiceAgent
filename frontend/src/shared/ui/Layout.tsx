@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 /* ----------------------------------------------------------------
-   Admin Shell — light sidebar + content
+   Admin Shell — warm stone sidebar + content
    ---------------------------------------------------------------- */
 
 interface AdminShellProps {
@@ -22,20 +22,22 @@ export function AdminShell({ children, email, onLogout }: AdminShellProps) {
 	return (
 		<div className="flex h-screen bg-bg-page text-text-primary">
 			{/* Sidebar */}
-			<aside className="w-[248px] flex-shrink-0 bg-bg-base border-r border-border-subtle flex flex-col py-4 gap-1 sticky top-0 h-screen">
+			<aside className="w-[220px] flex-shrink-0 bg-bg-base border-r border-stone-200 flex flex-col py-4 gap-1 sticky top-0 h-screen">
 				{/* Logo */}
-				<div className="px-3 pb-5 flex items-center gap-3">
-					<div
-						className="w-8 h-8 rounded-lg grid place-items-center flex-shrink-0"
-						style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-teal)" }}
-					>
-						<svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-							<path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+				<div className="px-3 pb-5 flex items-center gap-2.5">
+					<div className="w-7 h-7 rounded-md bg-forest-500 grid place-items-center flex-shrink-0">
+						<svg width="14" height="14" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+							<path d="M12 2H4a2 2 0 0 0-2 2v12l4-4h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" />
 						</svg>
 					</div>
-					<span className="font-display text-[17px] font-bold text-text-primary tracking-tight">
-						Agentic Forms
+					<span className="font-heading text-[15px] font-semibold text-text-primary">
+						AgentForms
 					</span>
+				</div>
+
+				{/* Section label */}
+				<div className="px-4 pb-2 text-[10px] text-text-tertiary font-medium uppercase tracking-[0.07em]">
+					Workspace
 				</div>
 
 				{/* Nav */}
@@ -46,15 +48,12 @@ export function AdminShell({ children, email, onLogout }: AdminShellProps) {
 							<Link
 								key={item.to}
 								to={item.to}
-								className={`flex items-center gap-3 px-3 py-[9px] rounded-lg text-[13px] font-medium transition-all duration-[120ms] relative ${
+								className={`flex items-center gap-2 px-2.5 py-2 rounded-md text-[13px] transition-all duration-[120ms] ${
 									isActive
-										? "text-teal-700 bg-teal-50 font-semibold"
+										? "bg-forest-100 text-forest-600 font-medium"
 										: "text-text-secondary hover:text-text-primary hover:bg-stone-50"
 								}`}
 							>
-								{isActive && (
-									<span className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-teal-500 rounded-r-full" />
-								)}
 								<item.icon active={isActive} />
 								{item.label}
 							</Link>
@@ -63,14 +62,14 @@ export function AdminShell({ children, email, onLogout }: AdminShellProps) {
 				</nav>
 
 				{/* User / Logout */}
-				<div className="px-4 pt-4 border-t border-border-subtle">
+				<div className="px-4 pt-4 border-t border-stone-100">
 					{email && (
-						<p className="text-[11px] text-text-muted truncate mb-2 font-mono">{email}</p>
+						<p className="text-[11px] text-text-tertiary truncate mb-2 font-mono">{email}</p>
 					)}
 					{onLogout && (
 						<button
 							onClick={onLogout}
-							className="w-full text-left text-[13px] text-text-secondary hover:text-text-primary py-1 transition-colors duration-[120ms] font-body"
+							className="w-full text-left text-[13px] text-text-secondary hover:text-text-primary py-1 transition-colors duration-[120ms]"
 						>
 							Sign out
 						</button>
@@ -101,23 +100,23 @@ interface PageHeaderProps {
 export function PageHeader({ title, subtitle, backTo, backLabel, actions }: PageHeaderProps) {
 	return (
 		<header
-			className="sticky top-0 z-20 px-8 py-5 border-b border-border-subtle flex items-center justify-between gap-4"
-			style={{ background: "rgba(250,250,249,0.85)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
+			className="sticky top-0 z-20 px-8 py-5 border-b border-stone-100 flex items-center justify-between gap-4"
+			style={{ background: "rgba(247,245,240,0.85)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
 		>
 			<div>
 				{backTo && (
 					<Link
 						to={backTo}
-						className="text-[11px] uppercase tracking-widest font-semibold text-text-muted hover:text-teal-600 mb-1 inline-block transition-colors"
+						className="text-[11px] uppercase tracking-widest font-medium text-text-tertiary hover:text-forest-500 mb-1 inline-block transition-colors"
 					>
 						&larr; {backLabel || "Back"}
 					</Link>
 				)}
-				<h1 className="font-display text-[26px] font-bold text-text-primary leading-tight tracking-tight">
+				<h1 className="font-heading text-[28px] font-semibold text-text-primary leading-tight">
 					{title}
 				</h1>
 				{subtitle && (
-					<p className="text-[13px] text-text-secondary mt-0.5 font-body">{subtitle}</p>
+					<p className="text-[13px] text-text-secondary mt-0.5">{subtitle}</p>
 				)}
 			</div>
 			{actions && <div className="flex gap-3">{actions}</div>}
@@ -157,11 +156,13 @@ export function PageLayout({ children, maxWidth = "xl" }: PageLayoutProps) {
 export function EmptyState({ title, description, action }: { title: string; description: string; action?: ReactNode }) {
 	return (
 		<div className="flex flex-col items-center justify-center py-20 px-8 text-center gap-3">
-			<div className="w-16 h-16 bg-stone-50 border-[1.5px] border-stone-200 rounded-2xl grid place-items-center text-[28px] mb-2">
-				💬
+			<div className="w-12 h-12 bg-forest-100 rounded-lg grid place-items-center mb-2">
+				<svg className="w-6 h-6 text-forest-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+					<path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+				</svg>
 			</div>
-			<h2 className="font-display font-bold text-[22px] text-text-primary tracking-tight">{title}</h2>
-			<p className="text-[13px] text-text-secondary max-w-[260px] leading-relaxed font-body">{description}</p>
+			<h2 className="font-heading font-medium text-[18px] text-text-primary">{title}</h2>
+			<p className="text-[13px] text-text-secondary max-w-[260px] leading-relaxed">{description}</p>
 			{action}
 		</div>
 	);
@@ -170,14 +171,14 @@ export function EmptyState({ title, description, action }: { title: string; desc
 export function ErrorDisplay({ message, retry }: { message: string; retry?: () => void }) {
 	return (
 		<div
-			className="rounded-2xl p-8 border text-center"
+			className="rounded-lg p-8 border text-center"
 			style={{ background: "var(--error-bg)", borderColor: "var(--error-border)" }}
 		>
-			<p className="text-error mb-4 font-body text-[14px]">{message}</p>
+			<p className="text-error mb-4 text-sm">{message}</p>
 			{retry && (
 				<button
 					onClick={retry}
-					className="px-4 py-2 rounded-lg bg-bg-elevated border border-border-default text-text-secondary hover:text-text-primary text-[13px] transition-colors font-body"
+					className="px-4 py-2 rounded-md bg-bg-elevated border border-stone-200 text-text-secondary hover:text-text-primary text-[13px] transition-colors"
 				>
 					Try Again
 				</button>
@@ -193,10 +194,13 @@ export function ErrorDisplay({ message, retry }: { message: string; retry?: () =
 function DashboardIcon({ active }: { active?: boolean }) {
 	return (
 		<svg
-			className={`w-4 h-4 flex-shrink-0 transition-colors ${active ? "text-teal-500" : "text-text-muted"}`}
+			className={`w-[15px] h-[15px] flex-shrink-0 transition-colors ${active ? "text-forest-500" : "text-text-tertiary"}`}
 			fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
 		>
-			<path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" />
+			<rect x="3" y="3" width="7" height="7" />
+			<rect x="14" y="3" width="7" height="7" />
+			<rect x="14" y="14" width="7" height="7" />
+			<rect x="3" y="14" width="7" height="7" />
 		</svg>
 	);
 }
@@ -204,7 +208,7 @@ function DashboardIcon({ active }: { active?: boolean }) {
 function PlusIcon({ active }: { active?: boolean }) {
 	return (
 		<svg
-			className={`w-4 h-4 flex-shrink-0 transition-colors ${active ? "text-teal-500" : "text-text-muted"}`}
+			className={`w-[15px] h-[15px] flex-shrink-0 transition-colors ${active ? "text-forest-500" : "text-text-tertiary"}`}
 			fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
 		>
 			<path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

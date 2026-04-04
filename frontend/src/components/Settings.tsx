@@ -114,10 +114,10 @@ export default function Settings() {
 
 	if (loading) {
 		return (
-			<div className="glass-elevated rounded-3xl shadow-2xl p-10 text-center border border-border/50">
+			<div className="bg-bg-base rounded-lg border-[0.5px] border-stone-200 shadow-md p-10 text-center">
 				<div className="flex flex-col items-center gap-4">
-					<div className="w-12 h-12 border-4 border-accent-primary border-t-transparent rounded-full animate-spin-slow"></div>
-					<p className="text-text-secondary font-body">
+					<div className="w-12 h-12 border-4 border-forest-500 border-t-transparent rounded-full animate-spin"></div>
+					<p className="text-text-secondary">
 						Loading settings...
 					</p>
 				</div>
@@ -127,13 +127,13 @@ export default function Settings() {
 
 	if (!settings) {
 		return (
-			<div className="glass-elevated rounded-3xl shadow-2xl p-10 text-center border border-border/50">
-				<p className="text-error font-body mb-6">
+			<div className="bg-bg-base rounded-lg border-[0.5px] border-stone-200 shadow-md p-10 text-center">
+				<p className="text-error mb-6">
 					Failed to load settings
 				</p>
 				<button
 					onClick={fetchSettings}
-					className="px-6 py-3 bg-accent-primary text-bg-primary rounded-lg hover:bg-accent-secondary font-body font-semibold transition-all shadow-lg shadow-accent-primary/50 hover:shadow-accent-secondary/50"
+					className="px-6 py-[9px] bg-forest-500 text-white rounded-md hover:bg-forest-600 font-medium transition-all shadow-forest"
 				>
 					Retry
 				</button>
@@ -141,65 +141,64 @@ export default function Settings() {
 		);
 	}
 
+	const inputClass = "w-full px-4 py-[9px] bg-bg-base text-text-primary rounded-md border-[0.5px] border-stone-200 focus:outline-none focus:border-forest-500 focus:shadow-forest-ring transition-all text-sm";
+
 	return (
-		<div className="glass-elevated rounded-3xl shadow-2xl p-10 border border-border/50">
-			<h2 className="text-3xl font-heading font-bold text-text-primary mb-8 tracking-tight">
+		<div className="bg-bg-base rounded-lg border-[0.5px] border-stone-200 shadow-md p-10">
+			<h2 className="text-2xl font-heading font-semibold text-text-primary mb-8">
 				Settings
 			</h2>
 
 			{message && (
 				<div
-					className={`mb-6 p-4 rounded-xl border ${
+					className={`mb-6 p-4 rounded-md border-[0.5px] text-sm ${
 						message.type === "success"
-							? "bg-success/10 border-success/30 text-success"
-							: "bg-error/10 border-error/30 text-error"
-					} font-body`}
+							? "bg-forest-50 border-forest-200 text-forest-600"
+							: "text-error"
+					}`}
+					style={message.type === "error" ? { background: "var(--error-bg)", borderColor: "var(--error-border)" } : undefined}
 				>
 					{message.text}
 				</div>
 			)}
 
-			<form onSubmit={handleSave} className="space-y-8">
-				<div className="space-y-2">
-					<label className="block text-text-primary font-heading font-semibold text-sm uppercase tracking-wider mb-3">
+			<form onSubmit={handleSave} className="space-y-6">
+				<div className="space-y-1">
+					<label className="block text-[13px] font-medium text-text-primary">
 						Agent Name
 					</label>
 					<input
 						type="text"
 						name="agent_name"
 						defaultValue={settings.agent_name}
-						className="w-full px-5 py-3 glass text-text-primary rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent-primary/50 focus:border-accent-primary transition-all font-body"
+						className={inputClass}
 						placeholder="Enter agent name"
 					/>
 				</div>
 
-				<div className="space-y-2">
-					<label className="block text-text-primary font-heading font-semibold text-sm uppercase tracking-wider mb-3">
+				<div className="space-y-1">
+					<label className="block text-[13px] font-medium text-text-primary">
 						TTS Voice
 					</label>
 					<select
 						name="tts_voice"
 						defaultValue={settings.tts_voice}
-						className="w-full px-5 py-3 glass text-text-primary rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent-primary/50 focus:border-accent-primary transition-all font-body appearance-none cursor-pointer"
+						className={`${inputClass} appearance-none cursor-pointer`}
 					>
 						{AVAILABLE_VOICES.map((voice) => (
-							<option
-								key={voice}
-								value={voice}
-								className="bg-bg-tertiary text-text-primary"
-							>
+							<option key={voice} value={voice}>
 								{voice.charAt(0).toUpperCase() + voice.slice(1)}
 							</option>
 						))}
 					</select>
 				</div>
 
-				<div className="space-y-3">
+				<div className="space-y-2">
 					<div className="flex justify-between items-center">
-						<label className="block text-text-primary font-heading font-semibold text-sm uppercase tracking-wider">
+						<label className="block text-[13px] font-medium text-text-primary">
 							Temperature
 						</label>
-						<span className="text-accent-primary font-body font-semibold text-lg">
+						<span className="text-forest-500 font-medium text-lg">
 							{settings.temperature}
 						</span>
 					</div>
@@ -210,23 +209,15 @@ export default function Settings() {
 						max="1"
 						step="0.1"
 						defaultValue={settings.temperature}
-						className="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer accent-accent-primary"
-						style={{
-							background: `linear-gradient(to right, var(--color-accent-primary) 0%, var(--color-accent-primary) ${
-								settings.temperature * 100
-							}%, var(--color-surface) ${
-								settings.temperature * 100
-							}%, var(--color-surface) 100%)`,
-						}}
+						className="w-full h-2 bg-stone-100 rounded-lg appearance-none cursor-pointer accent-forest-500"
 					/>
-					<p className="text-text-tertiary text-xs font-body mt-2">
-						Controls randomness (0.0 = deterministic, 1.0 =
-						creative)
+					<p className="text-text-tertiary text-xs mt-1">
+						Controls randomness (0.0 = deterministic, 1.0 = creative)
 					</p>
 				</div>
 
-				<div className="space-y-2">
-					<label className="block text-text-primary font-heading font-semibold text-sm uppercase tracking-wider mb-3">
+				<div className="space-y-1">
+					<label className="block text-[13px] font-medium text-text-primary">
 						Max Tokens
 					</label>
 					<input
@@ -236,13 +227,13 @@ export default function Settings() {
 						max="2000"
 						step="100"
 						defaultValue={settings.max_tokens}
-						className="w-full px-5 py-3 glass text-text-primary rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent-primary/50 focus:border-accent-primary transition-all font-body"
+						className={inputClass}
 						placeholder="Enter max tokens"
 					/>
 				</div>
 
-				<div className="space-y-2">
-					<label className="block text-text-primary font-heading font-semibold text-sm uppercase tracking-wider mb-3">
+				<div className="space-y-1">
+					<label className="block text-[13px] font-medium text-text-primary">
 						Max Turns
 					</label>
 					<input
@@ -252,21 +243,21 @@ export default function Settings() {
 						max="5"
 						step="1"
 						defaultValue={settings.max_turns}
-						className="w-full px-5 py-3 glass text-text-primary rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent-primary/50 focus:border-accent-primary transition-all font-body"
+						className={inputClass}
 						placeholder="Enter max turns"
 					/>
-					<p className="text-text-tertiary text-xs font-body mt-2">
+					<p className="text-text-tertiary text-xs mt-1">
 						Maximum number of conversation turns (1-5)
 					</p>
 				</div>
 
-				<div className="glass rounded-xl p-6 border border-border/30">
-					<h3 className="text-text-primary font-heading font-semibold mb-4 text-lg tracking-tight">
+				<div className="bg-stone-50 rounded-md p-5 border-[0.5px] border-stone-100">
+					<h3 className="text-text-primary font-heading font-medium mb-4 text-base">
 						Model Information
 					</h3>
-					<div className="space-y-2 font-body text-sm">
-						<div className="flex justify-between items-center py-2 border-b border-border/20">
-							<span className="text-text-tertiary uppercase text-xs tracking-wider">
+					<div className="space-y-2 text-sm">
+						<div className="flex justify-between items-center py-2 border-b border-stone-100">
+							<span className="text-text-tertiary text-xs uppercase tracking-wider">
 								STT Model
 							</span>
 							<span className="text-text-primary font-medium">
@@ -274,7 +265,7 @@ export default function Settings() {
 							</span>
 						</div>
 						<div className="flex justify-between items-center py-2">
-							<span className="text-text-tertiary uppercase text-xs tracking-wider">
+							<span className="text-text-tertiary text-xs uppercase tracking-wider">
 								LLM Model
 							</span>
 							<span className="text-text-primary font-medium">
@@ -287,18 +278,15 @@ export default function Settings() {
 				<button
 					type="submit"
 					disabled={saving}
-					className="w-full px-6 py-4 bg-accent-primary hover:bg-accent-secondary disabled:bg-surface disabled:cursor-not-allowed text-bg-primary rounded-xl font-heading font-semibold transition-all shadow-lg shadow-accent-primary/50 hover:shadow-accent-secondary/50 disabled:shadow-none relative overflow-hidden group"
+					className="w-full px-6 py-3 bg-forest-500 hover:bg-forest-600 disabled:bg-stone-200 disabled:text-stone-400 disabled:cursor-not-allowed text-white rounded-md font-medium transition-all shadow-forest disabled:shadow-none"
 				>
 					{saving ? (
 						<span className="flex items-center justify-center gap-2">
-							<div className="w-4 h-4 border-2 border-bg-primary border-t-transparent rounded-full animate-spin"></div>
+							<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
 							Saving...
 						</span>
 					) : (
-						<>
-							<span className="relative z-10">Save Settings</span>
-							<span className="absolute inset-0 bg-gradient-to-r from-accent-primary to-accent-secondary opacity-0 group-hover:opacity-100 transition-opacity"></span>
-						</>
+						"Save Settings"
 					)}
 				</button>
 			</form>

@@ -1,4 +1,3 @@
-/** Submissions table — Living Interface botanical theme */
 import type { SubmissionRow } from "../../../shared/types/api";
 
 interface SubmissionTableProps {
@@ -13,31 +12,21 @@ export function SubmissionTable({ submissions }: SubmissionTableProps) {
 	if (submissions.length === 0) return null;
 
 	return (
-		<div
-			className="rounded-2xl overflow-hidden"
-			style={{ background: "var(--stone-0)", border: "1px solid var(--border-default)" }}
-		>
+		<div className="bg-bg-base rounded-lg border-[0.5px] border-stone-200 overflow-hidden">
 			<div className="overflow-x-auto">
-				<table className="w-full border-collapse">
+				<table className="w-full border-collapse text-[13px]">
 					<thead>
-						<tr style={{ borderBottom: "1.5px solid var(--border-subtle)" }}>
-							<th
-								className="px-4 py-3 text-left font-body text-[11px] font-semibold uppercase tracking-widest"
-								style={{ color: "var(--text-muted)", background: "var(--stone-25)" }}
-							>
+						<tr className="border-b border-stone-100">
+							<th className="px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-[0.05em] text-text-tertiary">
 								#
 							</th>
-							<th
-								className="px-4 py-3 text-left font-body text-[11px] font-semibold uppercase tracking-widest"
-								style={{ color: "var(--text-muted)", background: "var(--stone-25)" }}
-							>
+							<th className="px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-[0.05em] text-text-tertiary">
 								Completed
 							</th>
 							{fieldKeys.map((key) => (
 								<th
 									key={key}
-									className="px-4 py-3 text-left font-body text-[11px] font-semibold uppercase tracking-widest whitespace-nowrap"
-									style={{ color: "var(--text-muted)", background: "var(--stone-25)" }}
+									className="px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-[0.05em] text-text-tertiary whitespace-nowrap"
 								>
 									{key}
 								</th>
@@ -48,15 +37,12 @@ export function SubmissionTable({ submissions }: SubmissionTableProps) {
 						{submissions.map((sub, i) => (
 							<tr
 								key={sub.submission_id}
-								className="transition-colors"
-								style={{ borderBottom: "1px solid var(--border-subtle)" }}
-								onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "var(--stone-25)"; }}
-								onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}
+								className="border-b border-stone-100 transition-colors hover:bg-stone-50"
 							>
-								<td className="px-4 py-3 font-body text-[13px]" style={{ color: "var(--text-muted)" }}>
+								<td className="px-3 py-2.5 text-text-tertiary">
 									{i + 1}
 								</td>
-								<td className="px-4 py-3 font-body text-[13px] whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>
+								<td className="px-3 py-2.5 text-text-secondary whitespace-nowrap">
 									{new Date(sub.completed_at).toLocaleDateString(undefined, {
 										year: "numeric",
 										month: "short",
@@ -66,9 +52,9 @@ export function SubmissionTable({ submissions }: SubmissionTableProps) {
 									})}
 								</td>
 								{fieldKeys.map((key) => (
-									<td key={key} className="px-4 py-3 font-body text-[13px] max-w-[200px] truncate" style={{ color: "var(--text-primary)" }}>
+									<td key={key} className="px-3 py-2.5 text-text-primary max-w-[200px] truncate">
 										{sub.answers[key] || (
-											<span style={{ color: "var(--text-muted)" }}>-</span>
+											<span className="text-text-tertiary">-</span>
 										)}
 									</td>
 								))}
@@ -77,10 +63,7 @@ export function SubmissionTable({ submissions }: SubmissionTableProps) {
 					</tbody>
 				</table>
 			</div>
-			<div
-				className="px-4 py-3 border-t font-body text-[11px] uppercase tracking-widest"
-				style={{ borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}
-			>
+			<div className="px-3 py-2.5 border-t border-stone-100 text-[11px] font-medium uppercase tracking-[0.05em] text-text-tertiary">
 				{submissions.length} submission{submissions.length !== 1 ? "s" : ""}
 			</div>
 		</div>

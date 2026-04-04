@@ -1,8 +1,12 @@
 """Custom model providers for VoiceAgent."""
 
 from .groq_stt import GroqSTTModel
-from .gtts_model import GTTSModel
-from .orpheus_tts import OrpheusTTSModel
-from .voice_provider import CustomVoiceModelProvider
+from .groq_tts import GroqTTSModel
+from .voice_provider import CustomVoiceModelProvider, GroqVoiceModelProvider
 
-__all__ = ["GroqSTTModel", "GTTSModel", "OrpheusTTSModel", "CustomVoiceModelProvider"]
+__all__ = [
+    "GroqSTTModel",
+    "GroqTTSModel",
+    "GroqVoiceModelProvider",
+    "CustomVoiceModelProvider",
+]
