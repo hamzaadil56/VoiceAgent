@@ -97,14 +97,18 @@ uv run python main.py
 
 **Deployment layout:** The voice agent library is source-only at `backend/src/voiceagent/` and uses the backend venv for all packages. There is a single `backend/pyproject.toml` and uv is the only package manager for the backend. Deploy with the full repo; run `uv sync` only in `backend/`.
 
-### Deploying to Vercel
+### Deploying to VPS
 
-Vercel's build environment is PEP 668 "externally managed", so use **pip + requirements.txt** (uv is not used on Vercel).
+**Build Docker Image** (run from the repo root):
 
-1. **Root Directory:** `backend`
-2. **Framework Preset:** FastAPI (required so all routes go to the FastAPI app; do not set Output Directory)
-3. **Install Command:** `pip install -r requirements.txt --break-system-packages`
-4. **Build Command:** `python -c "from main import app; print('App loaded:', getattr(app, 'title', 'Voice Agent API'))"`
-5. **Output Directory:** leave empty / unset. For backend-only FastAPI, Vercel must not use a static output directory or every request will 404.
+```bash
+docker buildx build -f backend/Dockerfile -t hamzaadil/voiceagent-backend:latest .
+```
 
-The repo includes `backend/vercel.json` with `"framework": "fastapi"` and no `outputDirectory`, so the FastAPI app receives all requests. Entrypoint is `index.py` (or `app` from `pyproject.toml` [project.scripts]). Import the full repository so that `main.py` can resolve the `backend` package from the repo root. In the Vercel dashboard, ensure **Output Directory** is blank for this project
+> The build context must be the repo root (`.`) so the `backend` package resolves correctly inside the image.
+
+**Push to Docker Hub:**
+
+```bash
+docker push hamzaadil/voiceagent-backend:latest
+```
