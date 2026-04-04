@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backend Engineer"
+  short_description: "Enterprise backend architecture and service design"
+  default_prompt: "Use $backend-engineer to design scalable, maintainable backend architecture with clear service boundaries, strong operational defaults, and defensible framework decisions."

@@ -2,7 +2,7 @@
 
 export class AudioPlayer {
 	private audioContext: AudioContext | null = null;
-	private sampleRate: number = 24000; // Orpheus TTS outputs at 24kHz
+	private sampleRate: number = 24000; // Backend TTS outputs 24kHz PCM
 	private isPlaying: boolean = false;
 	private playbackQueue: AudioBufferSourceNode[] = [];
 

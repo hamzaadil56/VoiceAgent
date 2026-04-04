@@ -5,11 +5,13 @@ import os
 import subprocess
 import tempfile
 import wave
-import base64
-from typing import AsyncIterator, Optional
+from typing import Any, AsyncIterator, Optional
 
 import numpy as np
+from agents.voice import VoicePipeline, VoicePipelineConfig
 from voiceagent import VoiceAgent, Settings
+from voiceagent.models import GroqVoiceModelProvider
+from voiceagent.models.groq_tts import all_supported_voices_for_model
 
 from backend.logging_config import get_logger
 
@@ -28,7 +30,17 @@ class VoiceService:
         """
         self.settings = settings or Settings()
         self.agent: Optional[VoiceAgent] = None
+        self._voice_provider: Optional[GroqVoiceModelProvider] = None
+        self._initialize_voice_provider()
         self._initialize_agent()
+
+    def _initialize_voice_provider(self) -> None:
+        self._voice_provider = GroqVoiceModelProvider(
+            groq_api_key=self.settings.groq_api_key,
+            stt_model=self.settings.stt_model,
+            tts_model=self.settings.tts_model,
+            tts_voice=self.settings.tts_voice,
+        )
 
     def _initialize_agent(self):
         """Initialize the VoiceAgent instance."""
@@ -47,7 +59,63 @@ class VoiceService:
                 if key == "max_turns" and value is not None:
                     value = max(1, min(5, int(value)))  # Clamp between 1 and 5
                 setattr(self.settings, key, value)
+        self._initialize_voice_provider()
         self._initialize_agent()
+
+    def create_voice_pipeline(self, workflow: Any) -> VoicePipeline:
+        """Build a VoicePipeline (STT → workflow → TTS) using shared Groq voice models."""
+        if not self._voice_provider:
+            raise RuntimeError("Voice provider not initialized")
+        config = VoicePipelineConfig(model_provider=self._voice_provider)
+        return VoicePipeline(workflow=workflow, config=config)
+
+    def audio_bytes_to_int16_24k(self, audio_data: bytes) -> np.ndarray:
+        """Decode WebM/WAV/PCM bytes to mono int16 at 24 kHz (for VoicePipeline AudioInput)."""
+        def _safe_int16_buffer(raw: bytes) -> np.ndarray:
+            n = (len(raw) // 2) * 2
+            if n < len(raw):
+                logger.debug(
+                    "Truncated audio buffer by %d byte(s) for int16 alignment",
+                    len(raw) - n,
+                )
+            return np.frombuffer(raw[:n], dtype=np.int16)
+
+        sample_rate = 24000
+        audio_array = None
+        try:
+            audio_io = io.BytesIO(audio_data)
+            with wave.open(audio_io, "rb") as wav_file:
+                sample_rate = wav_file.getframerate()
+                audio_bytes = wav_file.readframes(wav_file.getnframes())
+                audio_array = _safe_int16_buffer(audio_bytes)
+        except Exception as e1:
+            logger.debug("Not WAV format, trying WebM conversion: %s", e1)
+            try:
+                wav_data = self._convert_webm_to_wav(audio_data)
+                audio_io = io.BytesIO(wav_data)
+                with wave.open(audio_io, "rb") as wav_file:
+                    sample_rate = wav_file.getframerate()
+                    audio_bytes = wav_file.readframes(wav_file.getnframes())
+                    audio_array = _safe_int16_buffer(audio_bytes)
+            except Exception as e2:
+                logger.warning("Could not process audio format: %s. Trying raw PCM.", e2)
+                audio_array = _safe_int16_buffer(audio_data)
+                sample_rate = 24000
+
+        if audio_array is None or len(audio_array) == 0:
+            raise ValueError("No valid audio data: buffer empty or failed to decode")
+
+        if len(audio_array.shape) > 1:
+            audio_array = audio_array[:, 0]
+        audio_array = audio_array.flatten()
+
+        if sample_rate != 24000:
+            from scipy import signal
+
+            num_samples = int(len(audio_array) * 24000 / sample_rate)
+            audio_array = signal.resample(audio_array, num_samples).astype(np.int16)
+
+        return audio_array
 
     def _convert_webm_to_wav(self, webm_data: bytes) -> bytes:
         """
@@ -77,7 +145,7 @@ class VoiceService:
                 wav_path = wav_file.name
 
             # Convert using ffmpeg
-            result = subprocess.run(
+            subprocess.run(
                 [
                     'ffmpeg', '-i', webm_path,
                     '-ar', '24000',  # Sample rate
@@ -119,43 +187,7 @@ class VoiceService:
         if not self.agent:
             raise RuntimeError("VoiceAgent not initialized")
 
-        # Convert bytes to numpy array
-        audio_array = None
-        try:
-            # Try to read as WAV first
-            audio_io = io.BytesIO(audio_data)
-            with wave.open(audio_io, "rb") as wav_file:
-                sample_rate = wav_file.getframerate()
-                n_channels = wav_file.getnchannels()
-                audio_bytes = wav_file.readframes(wav_file.getnframes())
-                audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-        except Exception as e1:
-            logger.debug("Not WAV format, trying WebM conversion: %s", e1)
-            # If not WAV, try to convert WebM to WAV
-            try:
-                wav_data = self._convert_webm_to_wav(audio_data)
-                audio_io = io.BytesIO(wav_data)
-                with wave.open(audio_io, "rb") as wav_file:
-                    sample_rate = wav_file.getframerate()
-                    audio_bytes = wav_file.readframes(wav_file.getnframes())
-                    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-            except Exception as e2:
-                logger.warning("Could not process audio format: %s. Trying raw PCM.", e2)
-                # Last resort: assume raw PCM at 24kHz
-                audio_array = np.frombuffer(audio_data, dtype=np.int16)
-                sample_rate = 24000
-
-        # Ensure mono and correct format
-        if len(audio_array.shape) > 1:
-            audio_array = audio_array[:, 0]
-        audio_array = audio_array.flatten()
-
-        # Resample if needed (VoiceAgent expects 24kHz)
-        if sample_rate != 24000:
-            from scipy import signal
-            num_samples = int(len(audio_array) * 24000 / sample_rate)
-            audio_array = signal.resample(
-                audio_array, num_samples).astype(np.int16)
+        audio_array = self.audio_bytes_to_int16_24k(audio_data)
 
         # Process through voice agent
         transcribed_text, audio_response = await self.agent.process_voice_input(
@@ -206,6 +238,19 @@ class VoiceService:
 
         return transcribed_text, pcm_audio_iterator()
 
+    async def synthesize_speech(self, text: str) -> AsyncIterator[bytes]:
+        """
+        TTS-only: synthesize the given text to raw int16 PCM at 24kHz.
+        GroqTTSModel yields raw PCM after Groq WAV decode/resample.
+        """
+        from agents.voice import TTSModelSettings
+
+        logger.debug("Synthesizing speech for: %s", text[:80] + "..." if len(text) > 80 else text)
+        tts = self._voice_provider.get_tts_model(None)
+        async for pcm_chunk in tts.run(text, TTSModelSettings()):
+            if pcm_chunk:
+                yield pcm_chunk
+
     async def process_text_message(self, text: str) -> tuple[str, AsyncIterator[bytes]]:
         """
         Process text message and get voice response as PCM stream.
@@ -231,36 +276,15 @@ class VoiceService:
         # Stream PCM audio chunks as they're generated
         async def pcm_audio_iterator():
             try:
-                # Collect all WAV chunks first (TTS streams one complete WAV in chunks)
-                logger.debug("Collecting TTS chunks...")
-                wav_chunks = []
-                async for wav_chunk in self.agent._tts_model.run(response_text, TTSModelSettings()):
-                    wav_chunks.append(wav_chunk)
-
-                # Combine into complete WAV file
-                complete_wav = b''.join(wav_chunks)
-                logger.debug("Complete WAV collected: %s bytes", len(complete_wav))
-
-                # Extract PCM from complete WAV file
-                pcm_data = self._extract_pcm_from_wav(complete_wav)
-
-                if not pcm_data:
-                    logger.error("Failed to extract PCM from WAV")
-                    return
-
-                logger.debug("Extracted PCM: %s bytes", len(pcm_data))
-
-                # Stream PCM in smaller chunks for real-time playback
-                chunk_size = 4096  # Stream in 4KB chunks
+                logger.debug("Streaming TTS PCM chunks...")
                 chunk_count = 0
-
-                for i in range(0, len(pcm_data), chunk_size):
-                    pcm_chunk = pcm_data[i:i + chunk_size]
-                    chunk_count += 1
-                    yield pcm_chunk
-
-                logger.debug("Streamed %s PCM chunks", chunk_count)
-
+                async for pcm_chunk in self._voice_provider.get_tts_model(None).run(
+                    response_text, TTSModelSettings()
+                ):
+                    if pcm_chunk:
+                        chunk_count += 1
+                        yield pcm_chunk
+                logger.debug("Streamed %s TTS chunks", chunk_count)
             except Exception as e:
                 logger.exception("TTS Error: %s", e)
                 raise
@@ -383,14 +407,15 @@ class VoiceService:
             return None
 
     def get_available_voices(self) -> list[str]:
-        """Get list of available TTS voices."""
-        return ["tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"]
+        """Get list of available Groq TTS voices for the configured model."""
+        return sorted(all_supported_voices_for_model(self.settings.tts_model))
 
     def get_settings(self) -> dict:
         """Get current settings as dictionary."""
         return {
             "agent_name": self.settings.agent_name,
             "tts_voice": self.settings.tts_voice,
+            "tts_model": self.settings.tts_model,
             "temperature": self.settings.temperature,
             "max_tokens": self.settings.max_tokens,
             "stt_model": self.settings.stt_model,

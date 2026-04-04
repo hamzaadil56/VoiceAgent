@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Engineer"
+  short_description: "Scalable frontend architecture and UX execution"
+  default_prompt: "Use $frontend-engineer to design and implement a scalable, maintainable frontend with polished UX/UI and strict quality gates."

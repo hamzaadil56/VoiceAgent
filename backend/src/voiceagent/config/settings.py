@@ -1,6 +1,5 @@
 """Configuration settings for VoiceAgent."""
 
-from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,35 +15,45 @@ class Settings(BaseSettings):
     )
 
     # API Keys
-    groq_api_key: str = Field(..., description="Groq API key")
+    groq_api_key: str = Field(..., description="Groq API key (STT, LLM, TTS)")
 
-    # LM Studio Configuration
-    lm_studio_url: str = Field(
-        ..., description="LM Studio server URL"
+    # TTS (Groq): canopylabs/orpheus-v1-english (200 chars/chunk, auto-chunked) or playai-tts (~10k chars)
+    tts_model: str = Field(
+        default="canopylabs/orpheus-v1-english",
+        description="Groq TTS model: canopylabs/orpheus-v1-english or playai-tts (see Groq TTS docs)",
     )
     tts_voice: str = Field(
-        default="tara",
-        description="Orpheus TTS voice (tara, leah, jess, leo, dan, mia, zac, zoe)",
+        default="troy",
+        description="Voice id for tts_model (Orpheus: troy, hannah, autumn, …; PlayAI: Fritz-PlayAI, …)",
     )
 
     # Model Configuration
-    stt_model: str = Field(default="whisper-large-v3",
-                           description="Speech-to-text model (Groq)")
-    llm_model: str = Field(default="llama-3.3-70b-versatile",
-                           description="LLM model for agent (Groq)")
+    stt_model: str = Field(
+        default="whisper-large-v3",
+        description="Speech-to-text model (Groq Whisper)",
+    )
+    llm_model: str = Field(
+        default="llama-3.3-70b-versatile",
+        description="LLM model for agent (Groq)",
+    )
 
     # Audio Configuration
     sample_rate: int = Field(
-        default=16000, description="Audio sample rate in Hz")
+        default=16000, description="Audio sample rate in Hz"
+    )
     channels: int = Field(default=1, description="Number of audio channels")
     chunk_size: int = Field(
-        default=1024, description="Audio chunk size for recording")
+        default=1024, description="Audio chunk size for recording"
+    )
     record_seconds: int = Field(
-        default=5, description="Maximum recording duration")
+        default=5, description="Maximum recording duration"
+    )
     silence_threshold: int = Field(
-        default=500, description="Silence detection threshold")
+        default=500, description="Silence detection threshold"
+    )
     silence_duration: float = Field(
-        default=2.0, description="Duration of silence to stop recording")
+        default=2.0, description="Duration of silence to stop recording"
+    )
 
     # Agent Configuration
     agent_name: str = Field(default="VoiceAssistant", description="Agent name")
@@ -53,11 +62,17 @@ class Settings(BaseSettings):
         description="Agent instructions",
     )
     max_tokens: int = Field(
-        default=500, description="Maximum tokens for LLM response")
+        default=500, description="Maximum tokens for LLM response"
+    )
     temperature: float = Field(
-        default=0.7, description="Temperature for LLM sampling")
+        default=0.7, description="Temperature for LLM sampling"
+    )
     max_turns: int = Field(
-        default=5, ge=1, le=5, description="Maximum number of conversation turns (1-5)")
+        default=5,
+        ge=1,
+        le=5,
+        description="Maximum number of conversation turns (1-5)",
+    )
 
     def __repr__(self) -> str:
         """String representation with masked API keys."""
@@ -65,6 +80,7 @@ class Settings(BaseSettings):
             f"Settings("
             f"groq_api_key={'***' if self.groq_api_key else None}, "
             f"stt_model={self.stt_model}, "
+            f"tts_model={self.tts_model}, "
             f"tts_voice={self.tts_voice}, "
             f"llm_model={self.llm_model})"
         )

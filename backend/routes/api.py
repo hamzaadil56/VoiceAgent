@@ -1,18 +1,17 @@
 """REST API routes for configuration and health checks."""
 
+import os
 from typing import Optional
 
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.config import BackendSettings
 from backend.logging_config import get_logger
 from backend.services.voice_service import VoiceService
 
 router = APIRouter()
 logger = get_logger(__name__)
-settings = BackendSettings()
 
 # Global voice service instance (will be initialized in main.py)
 voice_service: Optional[VoiceService] = None
@@ -23,6 +22,7 @@ class SettingsUpdate(BaseModel):
 
     agent_name: Optional[str] = None
     tts_voice: Optional[str] = None
+    tts_model: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
     agent_instructions: Optional[str] = None
@@ -41,42 +41,42 @@ async def health_check():
 @router.get("/spin")
 async def spin_server():
     """
-    Wake the serverless TTS endpoint by calling its /ping.
-    Backend sends Authorization: Bearer <TTS_API_KEY> from env. Returns the TTS
-    service health response. Frontend can call this and show 'Voice agent is
-    getting ready' while the request is pending.
+    Warm / verify Groq API connectivity (STT/LLM/TTS). Frontend can call this
+    while showing 'Voice agent is getting ready'.
     """
     if not voice_service:
         raise HTTPException(
             status_code=503, detail="Voice service not initialized"
         )
-    base_url = voice_service.settings.lm_studio_url.rstrip("/")
-    ping_url = f"{base_url}/ping"
-    headers = {}
-    if settings.tts_api_key:
-        headers["Authorization"] = f"Bearer {settings.tts_api_key}"
+    api_key = os.getenv("GROQ_API_KEY", "") or voice_service.settings.groq_api_key
+    if not api_key:
+        raise HTTPException(status_code=503, detail="GROQ_API_KEY not configured")
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.get(ping_url, headers=headers)
+            response = await client.get(
+                "https://api.groq.com/openai/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            return {"status": "ok", "groq": "reachable", "models_count": len(data.get("data", []))}
     except httpx.TimeoutException:
-        logger.warning("TTS server did not respond in time (serverless may still be waking)")
+        logger.warning("Groq API did not respond in time")
         raise HTTPException(
             status_code=504,
-            detail="TTS server did not respond in time (serverless may still be waking)",
+            detail="Groq API did not respond in time",
         )
     except httpx.HTTPStatusError as e:
-        logger.warning("TTS server error: %s %s", e.response.status_code, e.response.text)
+        logger.warning("Groq API error: %s %s", e.response.status_code, e.response.text)
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"TTS server error: {e.response.text}",
+            detail=f"Groq API error: {e.response.text}",
         )
     except Exception as e:
-        logger.exception("Failed to reach TTS server: %s", e)
+        logger.exception("Failed to reach Groq API: %s", e)
         raise HTTPException(
             status_code=502,
-            detail=f"Failed to reach TTS server: {str(e)}",
+            detail=f"Failed to reach Groq API: {str(e)}",
         )
 
 
