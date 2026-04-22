@@ -16,11 +16,28 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    email: str = Field(..., min_length=5)
+    password: str = Field(..., min_length=6)
+    full_name: str = Field(default="User")
+    org_name: str = Field(default="My Workspace")
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=6)
+
+
 class MeResponse(BaseModel):
     id: str
     email: str
     full_name: str
     memberships: list[dict[str, str]]
+    plan: str = "free"
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +76,14 @@ class FormGenerateResponse(BaseModel):
 # Form CRUD
 # ---------------------------------------------------------------------------
 
+class FormBranding(BaseModel):
+    logo_url: str = ""
+    primary_color: str = "#2d6a5a"
+    accent_color: str = "#c17c5a"
+    font: str = "Inter"
+    background_color: str = "#f7f5f0"
+
+
 class FormCreateRequest(BaseModel):
     """Create a new agentic form."""
 
@@ -69,6 +94,10 @@ class FormCreateRequest(BaseModel):
     persona: str = "Friendly and professional"
     system_prompt: str = ""
     fields: list[FormField] = Field(default_factory=list)
+    branding: FormBranding | None = None
+    locale: str = "en"
+    welcome_message: str = ""
+    completion_message: str = "Thank you for your response!"
 
 
 class FormCreateResponse(BaseModel):
@@ -95,6 +124,10 @@ class FormSummary(BaseModel):
     system_prompt: str = ""
     fields_schema: list[dict[str, Any]] = []
     published_version_id: str | None = None
+    branding: dict[str, Any] = {}
+    locale: str = "en"
+    welcome_message: str = ""
+    completion_message: str = "Thank you for your response!"
     created_at: str
     updated_at: str
 
@@ -151,10 +184,15 @@ class FormDetailResponse(FormSummary):
 class FormUpdateRequest(BaseModel):
     title: str | None = None
     description: str | None = None
+    slug: str | None = None
     persona: str | None = None
     mode: Literal["chat", "voice", "chat_voice"] | None = None
     system_prompt: str | None = None
     fields: list[FormField] | None = None
+    branding: FormBranding | None = None
+    locale: str | None = None
+    welcome_message: str | None = None
+    completion_message: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -256,3 +294,153 @@ class GraphEdgeIn(BaseModel):
     from_key: str
     to_key: str | None = None
     condition: dict[str, Any] | None = None
+
+
+# ---------------------------------------------------------------------------
+# Team / Invitations
+# ---------------------------------------------------------------------------
+
+class InviteRequest(BaseModel):
+    email: str
+    role: Literal["org_admin", "org_editor", "org_viewer"] = "org_editor"
+
+
+class InvitationResponse(BaseModel):
+    id: str
+    email: str
+    role: str
+    status: str
+
+
+class AcceptInviteRequest(BaseModel):
+    token: str
+    password: str = Field(default="", description="Required if user doesn't exist yet")
+    full_name: str = "User"
+
+
+# ---------------------------------------------------------------------------
+# Billing
+# ---------------------------------------------------------------------------
+
+class PlanInfo(BaseModel):
+    plan: str
+    responses_limit: int
+    forms_limit: int
+    voice_minutes_limit: int
+    seats_limit: int
+
+
+class UsageSummary(BaseModel):
+    responses_used: int
+    responses_limit: int
+    voice_minutes_used: float
+    voice_minutes_limit: int
+    forms_used: int
+    forms_limit: int
+    seats_used: int
+    seats_limit: int
+    plan: str
+
+
+class BillingResponse(BaseModel):
+    plan: PlanInfo
+    usage: UsageSummary
+    stripe_customer_id: str | None = None
+
+
+class CheckoutSessionResponse(BaseModel):
+    checkout_url: str
+
+
+# ---------------------------------------------------------------------------
+# Webhooks
+# ---------------------------------------------------------------------------
+
+class WebhookCreateRequest(BaseModel):
+    url: str
+    events: list[str] = Field(default_factory=lambda: ["submission.created"])
+
+
+class WebhookResponse(BaseModel):
+    id: str
+    url: str
+    events: list[str]
+    is_active: bool
+    created_at: str
+
+
+class WebhookDeliveryResponse(BaseModel):
+    id: str
+    event: str
+    status: str
+    status_code: int | None
+    attempts: int
+    created_at: str
+
+
+# ---------------------------------------------------------------------------
+# Templates
+# ---------------------------------------------------------------------------
+
+class FormTemplateResponse(BaseModel):
+    id: str
+    title: str
+    description: str
+    category: str
+    fields: list[FormField]
+    system_prompt: str
+    persona: str
+    mode: str
+
+
+# ---------------------------------------------------------------------------
+# Analytics (advanced)
+# ---------------------------------------------------------------------------
+
+class DropoffStep(BaseModel):
+    field_key: str
+    field_name: str
+    sessions_reached: int
+    sessions_answered: int
+    dropoff_pct: float
+
+
+class DropoffFunnelResponse(BaseModel):
+    form_id: str
+    total_sessions: int
+    steps: list[DropoffStep]
+
+
+class FormAnalyticsResponse(BaseModel):
+    form_id: str
+    total_sessions: int
+    total_submissions: int
+    completion_rate_pct: float
+    avg_completion_seconds: float | None
+    channel_breakdown: dict[str, int]
+    dropoff_funnel: list[DropoffStep]
+    sentiment_score: float | None
+
+
+# ---------------------------------------------------------------------------
+# API Keys
+# ---------------------------------------------------------------------------
+
+class ApiKeyCreateRequest(BaseModel):
+    name: str
+
+
+class ApiKeyCreateResponse(BaseModel):
+    id: str
+    name: str
+    prefix: str
+    key: str  # Only returned on creation
+
+
+class ApiKeyResponse(BaseModel):
+    id: str
+    name: str
+    prefix: str
+    is_active: bool
+    last_used_at: str | None
+    created_at: str

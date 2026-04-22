@@ -170,6 +170,14 @@ def save_answer(
 # Instructions
 # ---------------------------------------------------------------------------
 
+LOCALE_LABELS = {
+    "en": "English", "es": "Spanish", "fr": "French", "de": "German",
+    "pt": "Portuguese", "ar": "Arabic", "zh": "Chinese", "ja": "Japanese",
+    "ko": "Korean", "hi": "Hindi", "ur": "Urdu", "it": "Italian",
+    "nl": "Dutch", "ru": "Russian", "tr": "Turkish",
+}
+
+
 def _build_instructions(
     form: Form,
     collected_answers: dict[str, str] | None = None,
@@ -223,9 +231,21 @@ STRICT RULES — follow these exactly, every single turn:
 
 7. NEVER pass your own words as the value. NEVER pass greetings or acknowledgments."""
 
+    locale = getattr(form, "locale", "en") or "en"
+    lang_name = LOCALE_LABELS.get(locale, "English")
+    lang_instruction = ""
+    if locale != "en":
+        lang_instruction = f"\n## Language\nCONDUCT THE ENTIRE CONVERSATION IN {lang_name.upper()}. All your responses, questions, and acknowledgments MUST be in {lang_name}. The user may respond in {lang_name} or English; accept both.\n"
+
+    # Conditional logic note
+    conditions_note = ""
+    has_conditions = any(f.get("conditions") for f in (form.fields_schema or []))
+    if has_conditions:
+        conditions_note = "\n## Conditional Fields\nSome fields have conditions. Only ask for a field if its conditions are met based on previously collected answers. Skip fields whose conditions are not satisfied.\n"
+
     return f"""You are a conversational form assistant. Persona: {persona}
 {voice_note}
-
+{lang_instruction}
 ## Form: {form.title}
 {form.description or ""}
 
@@ -234,6 +254,7 @@ STRICT RULES — follow these exactly, every single turn:
 
 ## Fields
 {fields_desc or "No schema."}
+{conditions_note}
 {progress}
 ## Rules
 1. Ask one question at a time. When the user answers, call save_answer ONCE with the field name and the user's ACTUAL words as the value, then respond briefly and ask the next unanswered question.

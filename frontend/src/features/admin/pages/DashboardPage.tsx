@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../app/AuthProvider";
-import { adminApi } from "../../../shared/lib/httpClient";
+import { useDashboard } from "../hooks/useAdminQueries";
 import { AdminShell, EmptyState, PageBody, PageHeader } from "../../../shared/ui/Layout";
-import type { OrgDashboardResponse } from "../../../shared/types/api";
 
 function formatInt(n: number): string {
 	return new Intl.NumberFormat().format(n);
@@ -135,21 +134,10 @@ function ChannelBars({ channels }: { channels: Record<string, number> }) {
 export default function DashboardPage() {
 	const { admin, logout } = useAuth();
 	const navigate = useNavigate();
-	const [dash, setDash] = useState<OrgDashboardResponse | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
 
 	const orgId = admin?.memberships[0]?.org_id;
-
-	useEffect(() => {
-		if (!orgId) return;
-		setLoading(true);
-		adminApi
-			.get<OrgDashboardResponse>(`/orgs/${orgId}/dashboard`)
-			.then(setDash)
-			.catch((err) => setError(err.message))
-			.finally(() => setLoading(false));
-	}, [orgId]);
+	const { data: dash, isLoading: loading, error: queryError } = useDashboard(orgId);
+	const error = queryError ? (queryError as Error).message : null;
 
 	const handleLogout = () => {
 		logout();

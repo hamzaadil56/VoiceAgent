@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useConsumerSession } from "../hooks/useConsumerSession";
 import { ChatInterface } from "../components/ChatInterface";
 import { VoiceInterface } from "../components/VoiceInterface";
 
 export default function FormPage() {
 	const { slug } = useParams<{ slug: string }>();
+	const [searchParams] = useSearchParams();
+	const isEmbed = searchParams.get("embed") === "true";
+
 	const session = useConsumerSession();
 	const [channel, setChannel] = useState<"chat" | "voice">("chat");
 	const [activeMode, setActiveMode] = useState<"chat" | "voice">("chat");
@@ -20,34 +23,39 @@ export default function FormPage() {
 	const handleSwitchToChat = () => setActiveMode("chat");
 
 	return (
-		<div className="consumer-runtime min-h-screen flex flex-col items-center px-4 py-8">
-			{/* Header */}
-			<div className="w-full max-w-[640px] px-2 pb-4">
-				<div className="flex items-center gap-2 mb-2">
-					<span className="w-2 h-2 rounded-full bg-forest-500 flex-shrink-0" />
-					<span className="text-[11px] text-text-tertiary font-medium uppercase tracking-widest">
-						TalkForms
-					</span>
+		<div
+			className={`consumer-runtime min-h-screen flex flex-col items-center px-4 ${isEmbed ? "py-2" : "py-8"}`}
+		>
+			{/* Header - hidden in embed mode */}
+			{!isEmbed && (
+				<div className="w-full max-w-[640px] px-2 pb-4">
+					<div className="flex items-center gap-2 mb-2">
+						<span className="w-2 h-2 rounded-full bg-forest-500 flex-shrink-0" />
+						<span className="text-[11px] text-text-tertiary font-medium uppercase tracking-widest">
+							TalkForms
+						</span>
+					</div>
+					<h1 className="font-heading font-semibold text-[28px] text-text-primary leading-tight">
+						{slug
+							? slug
+									.replace(/-/g, " ")
+									.replace(/\b\w/g, (c) => c.toUpperCase())
+							: "Agentic Form"}
+					</h1>
+					{slug && (
+						<p className="text-[15px] text-text-secondary mt-1 leading-relaxed">
+							Answer a few questions through a conversational
+							experience.
+						</p>
+					)}
 				</div>
-				<h1 className="font-heading font-semibold text-[28px] text-text-primary leading-tight">
-					{slug
-						? slug
-								.replace(/-/g, " ")
-								.replace(/\b\w/g, (c) => c.toUpperCase())
-						: "Agentic Form"}
-				</h1>
-				{slug && (
-					<p className="text-[15px] text-text-secondary mt-1 leading-relaxed">
-						Answer a few questions through a conversational
-						experience.
-					</p>
-				)}
-			</div>
+			)}
 
 			<div className="w-full max-w-[640px] flex-1 flex flex-col">
 				{!session.isStarted ? (
-					/* Start screen */
-					<div className="bg-bg-base rounded-lg border-[0.5px] border-stone-200 p-8 text-center space-y-6 animate-fade-up shadow-md">
+					<div
+						className={`bg-bg-base rounded-lg border-[0.5px] border-stone-200 p-8 text-center space-y-6 animate-fade-up shadow-md ${isEmbed ? "mt-2" : ""}`}
+					>
 						<div>
 							<h2 className="font-heading font-semibold text-[22px] text-text-primary mb-2">
 								Ready to begin?
@@ -57,7 +65,6 @@ export default function FormPage() {
 							</p>
 						</div>
 
-						{/* Channel selector */}
 						<div className="flex justify-center gap-3">
 							<button
 								onClick={() => setChannel("chat")}
@@ -111,7 +118,6 @@ export default function FormPage() {
 							</button>
 						</div>
 
-						{/* Start button */}
 						<button
 							onClick={handleStart}
 							disabled={session.status === "starting"}
@@ -123,7 +129,7 @@ export default function FormPage() {
 									Starting...
 								</span>
 							) : (
-								"Start →"
+								"Start"
 							)}
 						</button>
 
@@ -149,6 +155,20 @@ export default function FormPage() {
 					/>
 				)}
 			</div>
+
+			{/* Powered by badge in embed mode */}
+			{isEmbed && (
+				<div className="mt-4 pb-2">
+					<a
+						href="https://talkforms.io"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-[10px] text-text-tertiary hover:text-text-secondary transition-colors"
+					>
+						Powered by TalkForms
+					</a>
+				</div>
+			)}
 		</div>
 	);
 }

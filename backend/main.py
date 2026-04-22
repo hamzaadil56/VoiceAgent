@@ -18,7 +18,7 @@ from backend.routes import api
 from backend.routes.websocket import websocket_endpoint
 from backend.services.voice_service import VoiceService
 from backend.v1.bootstrap import init_db
-from backend.v1.routes import auth_router, forms_router, public_router
+from backend.v1.routes import auth_router, billing_router, forms_router, public_router
 from rich.console import Console
 from contextlib import asynccontextmanager
 import uvicorn
@@ -104,6 +104,7 @@ app.add_middleware(
 # Include routers
 app.include_router(api.router, prefix="/api", tags=["api"])
 app.include_router(auth_router, prefix="/v1")
+app.include_router(billing_router, prefix="/v1")
 app.include_router(forms_router, prefix="/v1")
 app.include_router(public_router, prefix="/v1")
 

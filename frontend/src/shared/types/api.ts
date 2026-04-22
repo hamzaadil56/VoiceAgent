@@ -6,6 +6,7 @@ export interface AdminUser {
 	email: string;
 	full_name: string;
 	memberships: OrgMembership[];
+	plan: string;
 }
 
 export interface OrgMembership {
@@ -21,9 +22,35 @@ export interface TokenResponse {
 // --- Form Fields (agentic) ---
 export interface FormField {
 	name: string;
-	type: "text" | "email" | "number" | "phone" | "url" | "date" | "select" | "boolean";
+	type:
+		| "text"
+		| "email"
+		| "number"
+		| "phone"
+		| "url"
+		| "date"
+		| "select"
+		| "boolean"
+		| "file"
+		| "payment";
 	required: boolean;
 	description: string;
+	conditions?: FieldCondition[];
+}
+
+export interface FieldCondition {
+	field_key: string;
+	operator: "equals" | "not_equals" | "contains" | "greater_than" | "less_than";
+	value: string;
+}
+
+// --- Form Branding ---
+export interface FormBranding {
+	logo_url: string;
+	primary_color: string;
+	accent_color: string;
+	font: string;
+	background_color: string;
 }
 
 // --- Form Generation (AI-powered) ---
@@ -47,6 +74,10 @@ export interface FormCreatePayload {
 	persona: string;
 	system_prompt: string;
 	fields: FormField[];
+	branding?: FormBranding;
+	locale?: string;
+	welcome_message?: string;
+	completion_message?: string;
 }
 
 export interface FormCreateResponse {
@@ -68,6 +99,10 @@ export interface FormSummary {
 	system_prompt: string;
 	fields_schema: FormField[];
 	published_version_id: string | null;
+	branding: Record<string, string>;
+	locale: string;
+	welcome_message: string;
+	completion_message: string;
 	created_at: string;
 	updated_at: string;
 }
@@ -156,4 +191,98 @@ export interface ChatMessage {
 	role: "assistant" | "user";
 	content: string;
 	timestamp?: number;
+}
+
+// --- Templates ---
+export interface FormTemplate {
+	id: string;
+	title: string;
+	description: string;
+	category: string;
+	fields: FormField[];
+	system_prompt: string;
+	persona: string;
+	mode: string;
+}
+
+// --- Analytics ---
+export interface DropoffStep {
+	field_key: string;
+	field_name: string;
+	sessions_reached: number;
+	sessions_answered: number;
+	dropoff_pct: number;
+}
+
+export interface FormAnalytics {
+	form_id: string;
+	total_sessions: number;
+	total_submissions: number;
+	completion_rate_pct: number;
+	avg_completion_seconds: number | null;
+	channel_breakdown: Record<string, number>;
+	dropoff_funnel: DropoffStep[];
+	sentiment_score: number | null;
+}
+
+// --- Billing ---
+export interface PlanInfo {
+	plan: string;
+	responses_limit: number;
+	forms_limit: number;
+	voice_minutes_limit: number;
+	seats_limit: number;
+}
+
+export interface UsageSummary {
+	responses_used: number;
+	responses_limit: number;
+	voice_minutes_used: number;
+	voice_minutes_limit: number;
+	forms_used: number;
+	forms_limit: number;
+	seats_used: number;
+	seats_limit: number;
+	plan: string;
+}
+
+export interface BillingResponse {
+	plan: PlanInfo;
+	usage: UsageSummary;
+	stripe_customer_id: string | null;
+}
+
+// --- Webhooks ---
+export interface WebhookConfig {
+	id: string;
+	url: string;
+	events: string[];
+	is_active: boolean;
+	created_at: string;
+}
+
+// --- Team ---
+export interface TeamMember {
+	id: string;
+	user_id: string;
+	email: string;
+	full_name: string;
+	role: string;
+}
+
+export interface InvitationItem {
+	id: string;
+	email: string;
+	role: string;
+	status: string;
+}
+
+// --- API Keys ---
+export interface ApiKeyItem {
+	id: string;
+	name: string;
+	prefix: string;
+	is_active: boolean;
+	last_used_at: string | null;
+	created_at: string;
 }

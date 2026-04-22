@@ -20,6 +20,12 @@ interface AuthContextValue {
 	isAuthenticated: boolean;
 	isLoading: boolean;
 	login: (email: string, password: string) => Promise<void>;
+	signup: (
+		email: string,
+		password: string,
+		fullName: string,
+		orgName: string,
+	) => Promise<void>;
 	logout: () => void;
 }
 
@@ -29,7 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	const [admin, setAdmin] = useState<AdminUser | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 
-	// Try to restore session from stored token
 	useEffect(() => {
 		const token = getAdminToken();
 		if (!token) {
@@ -55,6 +60,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		setAdmin(user);
 	}, []);
 
+	const signup = useCallback(
+		async (
+			email: string,
+			password: string,
+			fullName: string,
+			orgName: string,
+		) => {
+			const response = await adminApi.post<{ access_token: string }>(
+				"/auth/register",
+				{
+					email,
+					password,
+					full_name: fullName,
+					org_name: orgName,
+				},
+			);
+			setAdminToken(response.access_token);
+
+			const user = await adminApi.get<AdminUser>("/auth/me");
+			setAdmin(user);
+		},
+		[],
+	);
+
 	const logout = useCallback(() => {
 		clearAdminToken();
 		setAdmin(null);
@@ -66,9 +95,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			isAuthenticated: admin !== null,
 			isLoading,
 			login,
+			signup,
 			logout,
 		}),
-		[admin, isLoading, login, logout],
+		[admin, isLoading, login, signup, logout],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

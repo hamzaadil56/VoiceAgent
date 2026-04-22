@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .database import engine, SessionLocal
-from .models import Base, Organization, AdminUser, Membership
+from .models import Base, Organization, AdminUser, Membership, Subscription
 from .security import hash_password
 
 import logging

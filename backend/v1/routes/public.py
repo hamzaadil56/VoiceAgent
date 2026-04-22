@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import time
 
 import numpy as np
 
@@ -18,7 +19,8 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db, SessionLocal
 from ..deps import extract_public_session_token
-from ..models import Form, Message, RespondentSession, Submission
+from ..models import Form, Message, Organization, RespondentSession, Submission
+from ..session_store import session_store
 from ..schemas import (
     CompleteSessionResponse,
     MessageItem,
@@ -48,6 +50,9 @@ async def create_public_session(
     db: Session = Depends(get_db),
 ):
     """Create a new consumer session for an agentic form."""
+    if not session_store.check_rate_limit(f"session_create:{slug}", max_requests=60, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again later.")
+
     form = db.execute(
         select(Form).where(Form.slug == slug, Form.status == "published")
     ).scalar_one_or_none()
@@ -101,6 +106,9 @@ async def public_message(
     claims = decode_token(token)
     if claims.get("type") != "public_session" or claims.get("sid") != session_id:
         raise HTTPException(status_code=401, detail="Invalid session token")
+
+    if not session_store.check_rate_limit(f"msg:{session_id}", max_requests=30, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please slow down.")
 
     respondent_session = db.get(RespondentSession, session_id)
     if not respondent_session:
@@ -252,6 +260,7 @@ async def public_voice_session(websocket: WebSocket, session_id: str):
     db = SessionLocal()
     audio_chunks: list[bytes] = []
     authed = False
+    voice_start_time: float | None = None
 
     try:
         voice_service = websocket.app.state.voice_service if hasattr(websocket.app.state, "voice_service") else None
@@ -268,6 +277,7 @@ async def public_voice_session(websocket: WebSocket, session_id: str):
                     await websocket.close(code=4401)
                     return
                 authed = True
+                voice_start_time = time.time()
 
                 # Send initial prompt via agent engine
                 respondent_session = db.get(RespondentSession, session_id)
@@ -511,6 +521,19 @@ async def public_voice_session(websocket: WebSocket, session_id: str):
             await websocket.send_json({"type": "error", "data": f"Unknown message type: {msg_type}"})
 
     except WebSocketDisconnect:
-        return
+        pass
     finally:
+        if voice_start_time and authed:
+            duration_minutes = (time.time() - voice_start_time) / 60.0
+            try:
+                session = db.get(RespondentSession, session_id)
+                if session:
+                    meta = session.metadata_json or {}
+                    meta["voice_minutes"] = round(
+                        meta.get("voice_minutes", 0) + duration_minutes, 2
+                    )
+                    session.metadata_json = meta
+                    db.commit()
+            except Exception:
+                logger.exception("Failed to record voice minutes")
         db.close()

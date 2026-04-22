@@ -1,20 +1,20 @@
 import { type FormEvent, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../app/AuthProvider";
 
-export default function LoginPage() {
-	const { login, isAuthenticated } = useAuth();
+export default function SignupPage() {
+	const { signup, isAuthenticated } = useAuth();
 	const navigate = useNavigate();
-	const [searchParams] = useSearchParams();
-	const redirectTo = searchParams.get("redirect") || "/admin";
 
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [fullName, setFullName] = useState("");
+	const [orgName, setOrgName] = useState("My Workspace");
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 
 	if (isAuthenticated) {
-		navigate(redirectTo, { replace: true });
+		navigate("/admin", { replace: true });
 		return null;
 	}
 
@@ -23,10 +23,10 @@ export default function LoginPage() {
 		setLoading(true);
 		setError(null);
 		try {
-			await login(email, password);
-			navigate(redirectTo, { replace: true });
+			await signup(email, password, fullName, orgName);
+			navigate("/admin", { replace: true });
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Login failed");
+			setError(err instanceof Error ? err.message : "Signup failed");
 		} finally {
 			setLoading(false);
 		}
@@ -50,14 +50,32 @@ export default function LoginPage() {
 						</svg>
 					</div>
 					<h1 className="font-heading font-semibold text-[28px] text-text-primary leading-tight">
-						Welcome back
+						Create your account
 					</h1>
 					<p className="text-[13px] text-text-secondary mt-2">
-						Sign in to manage your form talks.
+						Start building conversational forms in minutes.
 					</p>
 				</div>
 
 				<form className="space-y-4" onSubmit={onSubmit}>
+					<div>
+						<label
+							htmlFor="fullName"
+							className="block text-[13px] font-medium text-text-primary mb-[5px]"
+						>
+							Full Name
+						</label>
+						<input
+							id="fullName"
+							className="w-full px-3 py-[9px] rounded-md text-text-primary text-sm border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all placeholder:text-text-tertiary focus:border-forest-500 focus:shadow-forest-ring"
+							value={fullName}
+							onChange={(e) => setFullName(e.target.value)}
+							placeholder="Your name"
+							type="text"
+							autoComplete="name"
+							required
+						/>
+					</div>
 					<div>
 						<label
 							htmlFor="email"
@@ -77,29 +95,38 @@ export default function LoginPage() {
 						/>
 					</div>
 					<div>
-						<div className="flex items-center justify-between mb-[5px]">
-							<label
-								htmlFor="password"
-								className="block text-[13px] font-medium text-text-primary"
-							>
-								Password
-							</label>
-							<Link
-								to="/admin/forgot-password"
-								className="text-[12px] text-forest-600 hover:text-forest-700"
-							>
-								Forgot password?
-							</Link>
-						</div>
+						<label
+							htmlFor="password"
+							className="block text-[13px] font-medium text-text-primary mb-[5px]"
+						>
+							Password
+						</label>
 						<input
 							id="password"
 							className="w-full px-3 py-[9px] rounded-md text-text-primary text-sm border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all placeholder:text-text-tertiary focus:border-forest-500 focus:shadow-forest-ring"
 							type="password"
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
-							placeholder="Password"
-							autoComplete="current-password"
+							placeholder="At least 6 characters"
+							autoComplete="new-password"
+							minLength={6}
 							required
+						/>
+					</div>
+					<div>
+						<label
+							htmlFor="orgName"
+							className="block text-[13px] font-medium text-text-primary mb-[5px]"
+						>
+							Workspace Name
+						</label>
+						<input
+							id="orgName"
+							className="w-full px-3 py-[9px] rounded-md text-text-primary text-sm border-[0.5px] border-stone-200 bg-bg-base outline-none transition-all placeholder:text-text-tertiary focus:border-forest-500 focus:shadow-forest-ring"
+							value={orgName}
+							onChange={(e) => setOrgName(e.target.value)}
+							placeholder="My Workspace"
+							type="text"
 						/>
 					</div>
 					{error && (
@@ -112,17 +139,17 @@ export default function LoginPage() {
 						disabled={loading}
 						type="submit"
 					>
-						{loading ? "Signing in..." : "Sign In"}
+						{loading ? "Creating account..." : "Create Account"}
 					</button>
 				</form>
 
 				<p className="text-center text-[13px] text-text-secondary mt-6">
-					Don't have an account?{" "}
+					Already have an account?{" "}
 					<Link
-						to="/admin/signup"
+						to="/admin/login"
 						className="text-forest-600 hover:text-forest-700 font-medium"
 					>
-						Create one
+						Sign in
 					</Link>
 				</p>
 			</div>

@@ -1,41 +1,30 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../../app/AuthProvider";
-import { exportCsv, fetchSubmissions } from "../api/adminApi";
+import { useExportCsv, useSubmissions } from "../hooks/useAdminQueries";
 import { SubmissionTable } from "../components/SubmissionTable";
 import { AdminShell, EmptyState, PageBody, PageHeader } from "../../../shared/ui/Layout";
-import type { SubmissionRow } from "../../../shared/types/api";
 
 export default function SubmissionsPage() {
 	const { formId } = useParams<{ formId: string }>();
 	const { admin, logout } = useAuth();
 	const navigate = useNavigate();
-	const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-	const [exporting, setExporting] = useState(false);
-	const [exportStatus, setExportStatus] = useState<string | null>(null);
 
-	useEffect(() => {
-		if (!formId) return;
-		setLoading(true);
-		fetchSubmissions(formId)
-			.then((res) => setSubmissions(res.rows))
-			.catch((err) => setError(err.message))
-			.finally(() => setLoading(false));
-	}, [formId]);
+	const { data, isLoading: loading, error: queryError } = useSubmissions(formId);
+	const submissions = data?.rows ?? [];
+	const error = queryError ? (queryError as Error).message : null;
+
+	const exportMutation = useExportCsv();
+	const [exportStatus, setExportStatus] = useState<string | null>(null);
 
 	const handleExport = async () => {
 		if (!formId) return;
-		setExporting(true);
 		setExportStatus(null);
 		try {
-			const res = await exportCsv(formId);
+			const res = await exportMutation.mutateAsync(formId);
 			setExportStatus(`Export created: ${res.row_count} rows`);
 		} catch (err) {
 			setExportStatus(err instanceof Error ? err.message : "Export failed");
-		} finally {
-			setExporting(false);
 		}
 	};
 
@@ -49,13 +38,13 @@ export default function SubmissionsPage() {
 				actions={
 					<button
 						onClick={handleExport}
-						disabled={exporting || submissions.length === 0}
+						disabled={exportMutation.isPending || submissions.length === 0}
 						className="px-5 py-[9px] rounded-md font-medium text-[13px] text-white bg-forest-500 hover:bg-forest-600 transition-all duration-150 disabled:opacity-50 shadow-forest inline-flex items-center gap-1.5"
 					>
 						<svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
 							<path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
 						</svg>
-						{exporting ? "Exporting..." : "Export CSV"}
+						{exportMutation.isPending ? "Exporting..." : "Export CSV"}
 					</button>
 				}
 			/>

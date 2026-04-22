@@ -1,0 +1,77 @@
+replicaCount: 1
+
+backend:
+  image:
+    repository: talkforms/backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 8000
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  env:
+    JWT_SECRET: ""
+    GROQ_API_KEY: ""
+    OPENAI_API_KEY: ""
+    STRIPE_SECRET_KEY: ""
+    STRIPE_WEBHOOK_SECRET: ""
+    RESEND_API_KEY: ""
+    FRONTEND_URL: "https://app.talkforms.io"
+
+frontend:
+  image:
+    repository: talkforms/frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+postgresql:
+  enabled: true
+  auth:
+    database: talkforms
+    username: talkforms
+    password: ""
+  primary:
+    persistence:
+      size: 10Gi
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: app.talkforms.io
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /v1
+          pathType: Prefix
+          service: backend
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /ws
+          pathType: Prefix
+          service: backend
+  tls: []
+
+license:
+  key: ""
