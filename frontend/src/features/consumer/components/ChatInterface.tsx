@@ -47,6 +47,8 @@ export function ChatInterface({
 	};
 
 	const isCompleted = status === "completed";
+	const isAbandoned = status === "abandoned";
+	const isClosed = isCompleted || isAbandoned;
 	const isBusy = status === "sending" || status === "streaming";
 	const isStreaming = status === "streaming";
 
@@ -80,7 +82,7 @@ export function ChatInterface({
 			</div>
 
 			{/* Input area */}
-			{!isCompleted ? (
+			{!isClosed ? (
 				<div className="px-5 pb-6 pt-3" style={{ background: "linear-gradient(to top, var(--stone-50) 75%, transparent)" }}>
 					<form
 						onSubmit={handleSubmit}
@@ -127,12 +129,18 @@ export function ChatInterface({
 				</div>
 			) : (
 				<div className="border-t border-stone-100 p-6 text-center">
-					<div className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-medium bg-forest-100 text-forest-600">
-						<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-							<path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-						</svg>
-						Form completed! Thank you for your responses.
-					</div>
+					{isCompleted ? (
+						<div className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-medium bg-forest-100 text-forest-600">
+							<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+								<path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+							</svg>
+							Form completed! Thank you for your responses.
+						</div>
+					) : (
+						<div className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-medium bg-stone-100 text-text-secondary">
+							Conversation ended. You can come back anytime.
+						</div>
+					)}
 				</div>
 			)}
 		</div>

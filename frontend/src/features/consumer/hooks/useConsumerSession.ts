@@ -3,7 +3,13 @@ import { useCallback, useRef, useState } from "react";
 import { createSession, sendMessage, streamMessage } from "../api/consumerApi";
 import type { ChatMessage } from "../../../shared/types/api";
 
-export type SessionStatus = "idle" | "starting" | "active" | "sending" | "streaming" | "completed" | "error";
+export type SessionStatus = "idle" | "starting" | "active" | "sending" | "streaming" | "completed" | "abandoned" | "error";
+
+function statusFromState(state: string): SessionStatus {
+	if (state === "completed") return "completed";
+	if (state === "abandoned") return "abandoned";
+	return "active";
+}
 
 interface UseConsumerSessionReturn {
 	sessionId: string;
@@ -54,7 +60,7 @@ export function useConsumerSession(): UseConsumerSessionReturn {
 					...prev,
 					{ role: "assistant", content: response.assistant_message, timestamp: Date.now() },
 				]);
-				setStatus(response.state === "completed" ? "completed" : "active");
+				setStatus(statusFromState(response.state));
 			} catch (err) {
 				setError(err instanceof Error ? err.message : "Failed to send message");
 				setStatus("error");
@@ -101,7 +107,7 @@ export function useConsumerSession(): UseConsumerSessionReturn {
 					},
 					(doneData) => {
 						streamingIndexRef.current = -1;
-						setStatus(doneData.state === "completed" ? "completed" : "active");
+						setStatus(statusFromState(doneData.state));
 					},
 					(errMsg) => {
 						streamingIndexRef.current = -1;

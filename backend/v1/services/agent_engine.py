@@ -167,6 +167,27 @@ def save_answer(
 
 
 # ---------------------------------------------------------------------------
+# Tool – abandon_session
+# ---------------------------------------------------------------------------
+
+@function_tool
+def abandon_session(ctx: RunContextWrapper[FormSessionContext]) -> str:
+    """Mark this session as abandoned when the user clearly wants to stop or come back later.
+
+    Call ONLY when the user explicitly states they want to stop, leave, take a break,
+    come back later, or do not want to continue. Do NOT call for hesitation or unclear answers.
+    """
+    fctx: FormSessionContext = ctx.context
+    fctx.respondent_session.status = "abandoned"
+    fctx.db.flush()
+    logger.info("abandon_session called: session=%s", fctx.respondent_session.id)
+    return (
+        "Session marked as abandoned. Say a warm goodbye, tell them they can come back "
+        "anytime, and do NOT ask any more questions."
+    )
+
+
+# ---------------------------------------------------------------------------
 # Instructions
 # ---------------------------------------------------------------------------
 
@@ -257,12 +278,31 @@ STRICT RULES — follow these exactly, every single turn:
 {conditions_note}
 {progress}
 ## Rules
-1. Ask one question at a time. When the user answers, call save_answer ONCE with the field name and the user's ACTUAL words as the value, then respond briefly and ask the next unanswered question.
-2. Only save answers the user explicitly gave. Do not guess, infer, or fill in answers from context or prior turns.
-3. When save_answer says all required fields are collected, thank the user and say goodbye.
-4. Keep replies short (1-2 sentences).
-5. If the user says something like "Thank you" or "Okay" without answering the question, do NOT call save_answer. Simply acknowledge and re-ask the same question.
-6. NEVER call save_answer more than once per response. NEVER pre-answer future questions."""
+1. Ask one question at a time. When the user gives a meaningful answer, call save_answer
+   ONCE with the field name and the user's actual words, briefly acknowledge, then ask
+   the next unanswered question.
+
+2. Evaluate the answer BEFORE calling save_answer. If it looks like random characters,
+   keyboard mashing, gibberish, or is clearly unrelated to the question, do NOT call
+   save_answer. Politely say it doesn't seem like a valid answer and re-ask the question.
+
+3. EXIT INTENT — If the user says they want to stop, leave, come back later, take a break,
+   or do not want to continue: call abandon_session immediately, then say a warm goodbye.
+   Do NOT continue asking questions. Do NOT try to convince them to stay.
+
+4. Only save what the user explicitly said. Never guess, infer, or auto-fill from context
+   or prior turns.
+
+5. When save_answer reports all required fields are collected, thank the user warmly and
+   say goodbye.
+
+6. Be warm and conversational. Briefly acknowledge each answer before moving on. Keep
+   responses to 2-3 sentences.
+
+7. If the user only says a polite filler ("Okay", "Thanks") with no answer, do NOT call
+   save_answer. Acknowledge briefly and re-ask the same question.
+
+8. NEVER call save_answer or abandon_session more than once per response."""
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +327,7 @@ def build_form_agent(
         instructions=instructions,
         model=_get_llm(),
         model_settings=ModelSettings(temperature=0.4, max_tokens=500, parallel_tool_calls=False),
-        tools=[save_answer],
+        tools=[save_answer, abandon_session],
     )
 
 
@@ -387,6 +427,8 @@ async def process_agent_message(
         db.expire(respondent_session)
         if respondent_session.status == "completed":
             assistant_message = "Thank you! Your responses have been recorded."
+        elif respondent_session.status == "abandoned":
+            assistant_message = "No problem — feel free to come back anytime. Take care!"
         else:
             fresh = _load_collected_answers(db, respondent_session.id)
             required = [f["name"] for f in (form.fields_schema or []) if f.get("required", True)]
