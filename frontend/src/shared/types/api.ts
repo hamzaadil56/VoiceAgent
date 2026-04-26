@@ -99,7 +99,7 @@ export interface FormSummary {
 	system_prompt: string;
 	fields_schema: FormField[];
 	published_version_id: string | null;
-	branding: Record<string, string>;
+	branding: FormBranding;
 	locale: string;
 	welcome_message: string;
 	completion_message: string;
@@ -275,6 +275,73 @@ export interface InvitationItem {
 	email: string;
 	role: string;
 	status: string;
+}
+
+// --- Insights: field distributions ---
+export interface FieldValueCount {
+	value: string;
+	count: number;
+	pct: number;
+}
+
+export interface FieldNumericStats {
+	field_key: string;
+	field_name: string;
+	field_type: "number";
+	count: number;
+	parseable_count: number;
+	min_val: number | null;
+	max_val: number | null;
+	avg_val: number | null;
+	median_val: number | null;
+	histogram: { bucket_label: string; count: number }[];
+}
+
+export interface FieldCategoricalStats {
+	field_key: string;
+	field_name: string;
+	field_type: "select" | "boolean";
+	total_responses: number;
+	value_counts: FieldValueCount[];
+}
+
+export interface FieldTextStats {
+	field_key: string;
+	field_name: string;
+	field_type: string;
+	total_responses: number;
+	top_values: FieldValueCount[];
+}
+
+export interface FieldDistribution {
+	field_key: string;
+	field_name: string;
+	field_type: string;
+	stats: FieldNumericStats | FieldCategoricalStats | FieldTextStats;
+}
+
+export interface FormFieldDistributionsResponse {
+	form_id: string;
+	total_submissions: number;
+	fields: FieldDistribution[];
+}
+
+// --- Insights: AI-generated qualitative analysis ---
+export interface FieldAIInsight {
+	field_key: string;
+	field_name: string;
+	summary: string;
+	themes: string[];
+	sentiment: "positive" | "mixed" | "negative" | "neutral";
+	notable_responses: string[];
+}
+
+export interface FormAIInsightsResponse {
+	form_id: string;
+	generated_at: string;
+	cached: boolean;
+	field_insights: FieldAIInsight[];
+	overall_summary: string;
 }
 
 // --- API Keys ---

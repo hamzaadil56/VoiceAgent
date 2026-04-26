@@ -5,12 +5,14 @@ import {
 	duplicateForm,
 	exportCsv,
 	fetchBilling,
+	fetchFieldDistributions,
 	fetchForm,
 	fetchFormAnalytics,
 	fetchForms,
 	fetchMembers,
 	fetchSubmissions,
 	fetchTemplates,
+	generateAIInsights,
 	generateForm,
 	publishForm,
 	unpublishForm,
@@ -135,6 +137,19 @@ export function useFormAnalytics(formId: string | undefined) {
 		queryFn: () => fetchFormAnalytics(formId!),
 		enabled: Boolean(formId),
 	});
+}
+
+// --- Insights ---
+export function useFieldDistributions(formId: string | undefined) {
+	return useQuery({
+		queryKey: ["field-distributions", formId],
+		queryFn: () => fetchFieldDistributions(formId!),
+		enabled: Boolean(formId),
+	});
+}
+
+export function useGenerateAIInsights() {
+	return useMutation({ mutationFn: generateAIInsights });
 }
 
 // --- Billing ---

@@ -9,6 +9,7 @@ const ForgotPasswordPage = lazy(() => import("../features/admin/pages/ForgotPass
 const DashboardPage = lazy(() => import("../features/admin/pages/DashboardPage"));
 const FormEditorPage = lazy(() => import("../features/admin/pages/FormEditorPage"));
 const SubmissionsPage = lazy(() => import("../features/admin/pages/SubmissionsPage"));
+const InsightsPage = lazy(() => import("../features/admin/pages/InsightsPage"));
 const TemplatesPage = lazy(() => import("../features/admin/pages/TemplatesPage"));
 const SettingsPage = lazy(() => import("../features/admin/pages/SettingsPage"));
 const FormPage = lazy(() => import("../features/consumer/pages/FormPage"));
@@ -63,6 +64,7 @@ export function AppRouter() {
 							<Route path="forms/new" element={<FormEditorPage />} />
 							<Route path="forms/:formId" element={<FormEditorPage />} />
 							<Route path="forms/:formId/submissions" element={<SubmissionsPage />} />
+							<Route path="forms/:formId/analytics" element={<InsightsPage />} />
 							<Route path="templates" element={<TemplatesPage />} />
 							<Route path="settings" element={<SettingsPage />} />
 							<Route path="settings/:tab" element={<SettingsPage />} />

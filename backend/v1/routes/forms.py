@@ -8,7 +8,10 @@ import json
 import uuid
 from datetime import date, datetime, timedelta
 
+import io
+
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy import Date, cast, extract, func, select
 from sqlalchemy.orm import Session
 
@@ -38,7 +41,6 @@ from ..schemas import (
     DashboardRecentSubmission,
     DropoffFunnelResponse,
     DropoffStep,
-    ExportCreateResponse,
     FormAnalyticsResponse,
     FormCreateRequest,
     FormCreateResponse,
@@ -61,10 +63,13 @@ from ..schemas import (
     WebhookCreateRequest,
     WebhookDeliveryResponse,
     WebhookResponse,
+    FormFieldDistributionsResponse,
+    FormAIInsightsResponse,
 )
 from ..security import generate_api_key, generate_invite_token
 from ..services.export_service import export_form_submissions_to_csv
 from ..services.form_generator import generate_form_from_prompt
+from ..services.insights_service import compute_field_distributions, generate_ai_insights
 
 router = APIRouter(tags=["v1-forms"])
 
@@ -607,7 +612,7 @@ def list_submissions(
 # Export
 # ---------------------------------------------------------------------------
 
-@router.post("/forms/{form_id}/exports/csv", response_model=ExportCreateResponse)
+@router.post("/forms/{form_id}/exports/csv")
 def export_submissions_csv(
     form_id: str,
     db: Session = Depends(get_db),
@@ -618,7 +623,7 @@ def export_submissions_csv(
         raise HTTPException(status_code=404, detail="Form not found")
     require_org_membership(form.org_id, current_user, db)
 
-    job = export_form_submissions_to_csv(db, form_id)
+    csv_content, row_count = export_form_submissions_to_csv(db, form_id)
     db.add(
         AuditLog(
             org_id=form.org_id,
@@ -626,11 +631,17 @@ def export_submissions_csv(
             action="form.export.csv",
             resource_type="form",
             resource_id=form.id,
-            details_json={"export_id": job.id, "row_count": job.row_count},
+            details_json={"row_count": row_count},
         )
     )
     db.commit()
-    return ExportCreateResponse(export_id=job.id, status=job.status, row_count=job.row_count, file_path=job.file_path)
+
+    filename = f"form_{form_id}_submissions.csv"
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode("utf-8")),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1077,6 +1088,36 @@ def form_analytics(
         dropoff_funnel=funnel,
         sentiment_score=None,
     )
+
+
+# ---------------------------------------------------------------------------
+# Insights — field distributions (pure DB) and AI analysis (on-demand)
+# ---------------------------------------------------------------------------
+
+@router.get("/forms/{form_id}/insights/distributions", response_model=FormFieldDistributionsResponse)
+def form_field_distributions(
+    form_id: str,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_admin),
+):
+    form = db.get(Form, form_id)
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    require_org_membership(form.org_id, current_user, db)
+    return compute_field_distributions(db, form)
+
+
+@router.post("/forms/{form_id}/insights/generate", response_model=FormAIInsightsResponse)
+def form_ai_insights(
+    form_id: str,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_admin),
+):
+    form = db.get(Form, form_id)
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    require_org_membership(form.org_id, current_user, db)
+    return generate_ai_insights(db, form)
 
 
 # ---------------------------------------------------------------------------

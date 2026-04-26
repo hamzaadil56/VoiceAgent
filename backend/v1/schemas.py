@@ -423,6 +423,79 @@ class FormAnalyticsResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Insights — field distributions (pure DB, no LLM)
+# ---------------------------------------------------------------------------
+
+class FieldValueCount(BaseModel):
+    value: str
+    count: int
+    pct: float
+
+
+class FieldNumericStats(BaseModel):
+    field_key: str
+    field_name: str
+    field_type: str
+    count: int
+    parseable_count: int
+    min_val: float | None
+    max_val: float | None
+    avg_val: float | None
+    median_val: float | None
+    histogram: list[dict]
+
+
+class FieldCategoricalStats(BaseModel):
+    field_key: str
+    field_name: str
+    field_type: str
+    total_responses: int
+    value_counts: list[FieldValueCount]
+
+
+class FieldTextStats(BaseModel):
+    field_key: str
+    field_name: str
+    field_type: str
+    total_responses: int
+    top_values: list[FieldValueCount]
+
+
+class FieldDistribution(BaseModel):
+    field_key: str
+    field_name: str
+    field_type: str
+    stats: FieldNumericStats | FieldCategoricalStats | FieldTextStats
+
+
+class FormFieldDistributionsResponse(BaseModel):
+    form_id: str
+    total_submissions: int
+    fields: list[FieldDistribution]
+
+
+# ---------------------------------------------------------------------------
+# Insights — AI-generated qualitative analysis
+# ---------------------------------------------------------------------------
+
+class FieldAIInsight(BaseModel):
+    field_key: str
+    field_name: str
+    summary: str
+    themes: list[str]
+    sentiment: str
+    notable_responses: list[str]
+
+
+class FormAIInsightsResponse(BaseModel):
+    form_id: str
+    generated_at: str
+    cached: bool
+    field_insights: list[FieldAIInsight]
+    overall_summary: str
+
+
+# ---------------------------------------------------------------------------
 # API Keys
 # ---------------------------------------------------------------------------
 

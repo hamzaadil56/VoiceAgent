@@ -1,12 +1,14 @@
 /** Admin feature API functions */
-import { adminApi } from "../../../shared/lib/httpClient";
+import { adminApi, getAdminToken, ApiError } from "../../../shared/lib/httpClient";
 import type {
 	ApiKeyItem,
 	BillingResponse,
-	ExportResponse,
+	FormAIInsightsResponse,
 	FormAnalytics,
 	FormCreatePayload,
 	FormCreateResponse,
+	FormBranding,
+	FormFieldDistributionsResponse,
 	FormGenerateResponse,
 	FormSummary,
 	FormTemplate,
@@ -16,6 +18,8 @@ import type {
 	TeamMember,
 	WebhookConfig,
 } from "../../../shared/types/api";
+
+const API_BASE = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
 
 export async function fetchForms(orgId: string) {
 	return adminApi.get<{ forms: FormSummary[] }>(`/orgs/${orgId}/forms`);
@@ -49,7 +53,7 @@ export async function updateForm(
 			| "welcome_message"
 			| "completion_message"
 			| "locale"
-		> & { branding?: Record<string, string>; fields?: FormSummary["fields_schema"] }
+		> & { branding?: FormBranding; fields?: FormSummary["fields_schema"] }
 	>,
 ) {
 	return adminApi.patch<FormSummary>(`/forms/${formId}`, payload);
@@ -71,8 +75,34 @@ export async function fetchSubmissions(formId: string) {
 	return adminApi.get<SubmissionsResponse>(`/forms/${formId}/submissions`);
 }
 
-export async function exportCsv(formId: string) {
-	return adminApi.post<ExportResponse>(`/forms/${formId}/exports/csv`);
+export async function exportCsv(formId: string): Promise<void> {
+	const token = getAdminToken();
+	const response = await fetch(`${API_BASE}/v1/forms/${formId}/exports/csv`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			...(token ? { Authorization: `Bearer ${token}` } : {}),
+		},
+	});
+	if (!response.ok) {
+		let message = `Export failed (${response.status})`;
+		let code = "unknown_error";
+		try {
+			const body = await response.json();
+			if (body?.detail) message = body.detail;
+			if (body?.code) code = body.code;
+		} catch { /* ignore */ }
+		throw new ApiError(response.status, code, message);
+	}
+	const blob = await response.blob();
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = `form_${formId}_submissions.csv`;
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(url);
 }
 
 // Templates
@@ -87,6 +117,15 @@ export async function fetchTemplate(templateId: string) {
 // Analytics
 export async function fetchFormAnalytics(formId: string) {
 	return adminApi.get<FormAnalytics>(`/forms/${formId}/analytics`);
+}
+
+// Insights
+export async function fetchFieldDistributions(formId: string) {
+	return adminApi.get<FormFieldDistributionsResponse>(`/forms/${formId}/insights/distributions`);
+}
+
+export async function generateAIInsights(formId: string) {
+	return adminApi.post<FormAIInsightsResponse>(`/forms/${formId}/insights/generate`);
 }
 
 // Webhooks

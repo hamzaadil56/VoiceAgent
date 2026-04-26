@@ -323,6 +323,14 @@ export default function DashboardPage() {
 													>
 														Submissions
 													</Link>
+													{form.submission_count > 0 && (
+														<Link
+															to={`/admin/forms/${form.form_id}/analytics`}
+															className="px-3 py-[7px] rounded-md text-[13px] text-forest-600 bg-forest-50 border-[0.5px] border-forest-200 hover:bg-forest-100"
+														>
+															Insights
+														</Link>
+													)}
 													{form.status === "published" && (
 														<Link
 															to={`/f/${form.slug}`}

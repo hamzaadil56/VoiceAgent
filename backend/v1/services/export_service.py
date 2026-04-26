@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 import csv
-import os
+import io
 from collections import defaultdict
-from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models import Answer, ExportJob, Submission
+from ..models import Answer, Submission
 
 
-def export_form_submissions_to_csv(db: Session, form_id: str) -> ExportJob:
+def build_csv_content(db: Session, form_id: str) -> tuple[str, int]:
     submissions = db.execute(
         select(Submission).where(Submission.form_id == form_id)
     ).scalars().all()
@@ -24,32 +23,29 @@ def export_form_submissions_to_csv(db: Session, form_id: str) -> ExportJob:
             select(Answer).where(Answer.session_id.in_(submission_ids))
         ).scalars().all()
 
-    answers_by_session = defaultdict(dict)
-    field_keys = set()
+    answers_by_session: dict[str, dict[str, str]] = defaultdict(dict)
+    field_keys: set[str] = set()
     for answer in answers:
         answers_by_session[answer.session_id][answer.field_key] = answer.value_text
         field_keys.add(answer.field_key)
 
     columns = ["submission_id", "session_id", "completed_at", *sorted(field_keys)]
 
-    export_dir = os.path.join("/tmp", "agentic_exports")
-    os.makedirs(export_dir, exist_ok=True)
-    file_name = f"form_{form_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.csv"
-    file_path = os.path.join(export_dir, file_name)
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=columns)
+    writer.writeheader()
+    for submission in submissions:
+        row: dict[str, str] = {
+            "submission_id": submission.id,
+            "session_id": submission.session_id,
+            "completed_at": submission.completed_at.isoformat(),
+        }
+        row.update(answers_by_session.get(submission.session_id, {}))
+        writer.writerow(row)
 
-    with open(file_path, "w", newline="", encoding="utf-8") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=columns)
-        writer.writeheader()
-        for submission in submissions:
-            row = {
-                "submission_id": submission.id,
-                "session_id": submission.session_id,
-                "completed_at": submission.completed_at.isoformat(),
-            }
-            row.update(answers_by_session.get(submission.session_id, {}))
-            writer.writerow(row)
+    return buf.getvalue(), len(submissions)
 
-    export_job = ExportJob(form_id=form_id, status="completed", row_count=len(submissions), file_path=file_path)
-    db.add(export_job)
-    db.flush()
-    return export_job
+
+# Keep old name as alias for backward compatibility with audit logging
+def export_form_submissions_to_csv(db: Session, form_id: str) -> tuple[str, int]:
+    return build_csv_content(db, form_id)
