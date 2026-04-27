@@ -1,5 +1,6 @@
 """FastAPI main application for Voice Agent web interface."""
 
+import logging
 import sys
 from pathlib import Path
 
@@ -12,6 +13,7 @@ sys.path.insert(0, str(_backend_dir.parent))
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import litellm
 from backend.config import BackendSettings
 from backend.logging_config import setup_logging, get_logger
 from backend.routes import api
@@ -30,6 +32,12 @@ settings = BackendSettings()
 setup_logging(level=settings.log_level)
 logger = get_logger(__name__)
 console = Console()
+
+# Enable LiteLLM verbose debug output so request/response failures are surfaced
+# instead of the generic "If you need to debug this error, use ..." stub.
+litellm._turn_on_debug()
+logging.getLogger("LiteLLM").setLevel(logging.DEBUG)
+logging.getLogger("litellm").setLevel(logging.DEBUG)
 
 # Initialize voice service
 voice_service = None

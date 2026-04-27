@@ -171,16 +171,27 @@ def save_answer(
 # ---------------------------------------------------------------------------
 
 @function_tool
-def abandon_session(ctx: RunContextWrapper[FormSessionContext]) -> str:
+def abandon_session(
+    ctx: RunContextWrapper[FormSessionContext],
+    reason: str,
+) -> str:
     """Mark this session as abandoned when the user clearly wants to stop or come back later.
 
     Call ONLY when the user explicitly states they want to stop, leave, take a break,
     come back later, or do not want to continue. Do NOT call for hesitation or unclear answers.
+
+    Args:
+        reason: Short summary of what the user said that signals they want to stop
+            (e.g. "user said they need to leave and will return later").
     """
     fctx: FormSessionContext = ctx.context
     fctx.respondent_session.status = "abandoned"
     fctx.db.flush()
-    logger.info("abandon_session called: session=%s", fctx.respondent_session.id)
+    logger.info(
+        "abandon_session called: session=%s reason=%r",
+        fctx.respondent_session.id,
+        reason,
+    )
     return (
         "Session marked as abandoned. Say a warm goodbye, tell them they can come back "
         "anytime, and do NOT ask any more questions."
